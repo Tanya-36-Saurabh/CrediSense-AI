@@ -1,0 +1,793 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrediSense AI Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #101827;
+            color: white;
+            margin: 0;
+            padding: 30px;
+        }
+
+        h1 {
+            color: #a78bfa;
+        }
+
+        h2 {
+            margin-top: 35px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: #202d43;
+            padding: 25px;
+            border-radius: 12px;
+        }
+
+        .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .credit-card {
+            background: #202d43;
+            padding: 22px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .credit-card h3 {
+            color: #c4b5fd;
+        }
+
+        .details {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin: 12px 0;
+        }
+
+        .progress {
+            width: 100%;
+            height: 12px;
+            background: #39465e;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #a78bfa;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+
+
+<section class="card" style="margin-top:30px;">
+    <h2>Add Credit Card</h2>
+
+    <form id="addCardForm">
+        <p>Bank Name</p>
+        <input id="bankName" required placeholder="HDFC">
+
+        <p>Card Name</p>
+        <input id="cardName" required placeholder="Millennia">
+
+        <p>Credit Limit</p>
+        <input id="creditLimit" type="number" min="1" step="0.01" required>
+
+        <p>Outstanding Amount</p>
+        <input id="outstandingAmount" type="number" min="0"
+               step="0.01" value="0" required>
+
+        <br><br>
+        <button type="submit">+ Add Credit Card</button>
+    </form>
+
+    <p id="formMessage"></p>
+</section>
+
+<script>
+    document.getElementById("addCardForm").addEventListener(
+        "submit",
+        async function(event) {
+            event.preventDefault();
+
+            const message = document.getElementById("formMessage");
+
+            const card = {
+                bank_name: document.getElementById("bankName").value,
+                card_name: document.getElementById("cardName").value,
+                credit_limit: Number(
+                    document.getElementById("creditLimit").value
+                ),
+                outstanding: Number(
+                    document.getElementById("outstandingAmount").value
+                )
+            };
+
+            if (card.outstanding > card.credit_limit) {
+                message.textContent = "Outstanding cannot exceed limit.";
+                return;
+            }
+
+            try {
+                const response = await fetch("/dashboard/add-card", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(card)
+                });
+
+                if (!response.ok) {
+                    throw new Error("Unable to add card");
+                }
+
+                message.textContent = "Credit Card Added Successfully!";
+                document.getElementById("addCardForm").reset();
+
+                loadDashboard();
+
+            } catch (error) {
+                message.textContent = "Failed to add credit card.";
+            }
+        }
+    );
+</script>
+
+
+
+<body>
+
+    <h1>CrediSense AI</h1>
+    <h2>Credit Card Dashboard</h2>
+
+    <div class="container">
+        <div class="card">
+            <h3>Total Cards</h3>
+            <p class="value" id="totalCards">0</p>
+        </div>
+
+        <div class="card">
+            <h3>Total Credit Limit</h3>
+            <p class="value" id="totalLimit">₹0</p>
+        </div>
+
+        <div class="card">
+            <h3>Outstanding</h3>
+            <p class="value" id="outstanding">₹0</p>
+        </div>
+
+        <div class="card">
+            <h3>Available Limit</h3>
+            <p class="value" id="available">₹0</p>
+        </div>
+
+        <div class="card">
+            <h3>Credit Utilization</h3>
+            <p class="value" id="utilization">0%</p>
+        </div>
+    </div>
+
+    <h2>My Credit Cards</h2>
+
+    <div id="cardList">
+
+        <p>Loading cards...</p>
+    </div>
+
+    
+<section class="card" style="margin-top: 30px;">
+    <h2>Transaction History</h2>
+
+    <div style="overflow-x: auto;">
+        <table style="width:100%; text-align:left; border-spacing:0 12px;">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Card</th>
+                    <th>Merchant</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="transactionList">
+                <tr>
+                    <td colspan="5">Loading transactions...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+
+    <script>
+        function money(amount) {
+            return "₹" + Number(amount).toLocaleString("en-IN");
+        }
+
+        async function loadDashboard() {
+            const cardList = document.getElementById("cardList");
+
+            try {
+                const response = await fetch("/card-summary");
+
+                if (!response.ok) {
+                    throw new Error("Failed to load dashboard");
+                }
+
+                const data = await response.json();
+
+                document.getElementById("totalCards").textContent =
+                    data.total_cards;
+
+                document.getElementById("totalLimit").textContent =
+                    money(data.total_credit_limit);
+
+                document.getElementById("outstanding").textContent =
+                    money(data.total_outstanding);
+
+                document.getElementById("available").textContent =
+                    money(data.total_available_limit);
+
+                document.getElementById("utilization").textContent =
+                    data.overall_utilization_percent + "%";
+
+                cardList.innerHTML = "";
+
+                if (data.cards.length === 0) {
+                    cardList.textContent = "No cards added yet.";
+                    return;
+                }
+
+                data.cards.forEach(card => {
+                    const box = document.createElement("div");
+                    box.className = "credit-card";
+
+                    const heading = document.createElement("h3");
+                    heading.textContent =
+                        card.bank_name + " - " + card.card_name;
+
+                    box.appendChild(heading);
+
+                    const fields = [
+                        ["Credit Limit", money(card.credit_limit)],
+                        ["Outstanding", money(card.outstanding)],
+                        ["Available Limit", money(card.available_limit)],
+                        ["Utilization", card.utilization_percent + "%"]
+                    ];
+
+                    fields.forEach(([label, value]) => {
+                        const row = document.createElement("div");
+                        row.className = "details";
+
+                        const left = document.createElement("span");
+                        left.textContent = label;
+
+                        const right = document.createElement("strong");
+                        right.textContent = value;
+
+                        row.append(left, right);
+                        box.appendChild(row);
+                    });
+
+                    const progress = document.createElement("div");
+                    progress.className = "progress";
+
+                    const fill = document.createElement("div");
+                    fill.className = "progress-fill";
+
+                    fill.style.width =
+                        Math.min(100, Math.max(0, card.utilization_percent)) + "%";
+
+                    progress.appendChild(fill);
+                    box.appendChild(progress);
+
+                    const deleteButton = document.createElement("button");
+                    deleteButton.textContent = "Delete Card";
+
+
+                    deleteButton.style.marginTop = "15px";
+                    deleteButton.style.padding = "10px 15px";
+                    deleteButton.style.background = "#ef4444";
+                    deleteButton.style.color = "white";
+                    deleteButton.style.border = "none";
+                    deleteButton.style.borderRadius = "8px";
+                    deleteButton.style.cursor = "pointer";
+ 
+                    deleteButton.onclick = async function() {
+                        const confirmed = confirm(
+                            "Are you sure you want to delete this card?"
+                        );
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch("/cards/" + card.id, {
+                                method: "DELETE"
+                            });
+
+                            if (!response.ok) {
+                                throw new Error("Delete failed");
+                            }
+
+                            alert("Card deleted successfully!");
+                            loadDashboard(); 
+
+                        } catch (error) {
+                        
+                            alert("Unable to delete card.");
+                        }
+
+
+  
+                    };
+
+const editButton = document.createElement("button");
+
+editButton.textContent = "Edit Card";
+editButton.style.marginTop = "15px";
+editButton.style.marginRight = "10px";
+editButton.style.padding = "10px 15px";
+editButton.style.background = "#8b5cf6";
+editButton.style.color = "white";
+editButton.style.border = "none";
+editButton.style.borderRadius = "8px";
+editButton.style.cursor = "pointer";
+
+editButton.onclick = async function() {
+    const bankName = prompt("Bank Name:", card.bank_name);
+    if (bankName === null) return;
+
+    const cardName = prompt("Card Name:", card.card_name);
+    if (cardName === null) return;
+
+    const limitInput = prompt("Credit Limit:", card.credit_limit);
+    if (limitInput === null) return;
+
+    const outstandingInput = prompt(
+        "Outstanding Amount:",
+        card.outstanding
+    );
+    if (outstandingInput === null) return;
+
+    const creditLimit = Number(limitInput);
+    const outstanding = Number(outstandingInput);
+
+    if (
+        !bankName.trim() ||
+        !cardName.trim() ||
+        !limitInput.trim() ||
+        !outstandingInput.trim() ||
+        !Number.isFinite(creditLimit) ||
+        creditLimit <= 0 ||
+        !Number.isFinite(outstanding) ||
+        outstanding < 0 ||
+        outstanding > creditLimit
+    ) {
+        alert("Please enter valid card details.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/cards/" + card.id, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                bank_name: bankName.trim(),
+                card_name: cardName.trim(),
+                credit_limit: creditLimit,
+                outstanding: outstanding
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error("Update failed");
+        }
+
+        alert("Card updated successfully!");
+        loadDashboard();
+
+    } catch (error) {
+        alert("Unable to update card.");
+    }
+};
+
+box.appendChild(editButton);
+
+editButton.textContent = "Edit Card";
+editButton.style.marginTop = "15px";
+editButton.style.marginRight = "10px";
+editButton.style.padding = "10px 15px";
+editButton.style.background = "#8b5cf6";
+editButton.style.color = "white";
+editButton.style.border = "none";
+editButton.style.borderRadius = "8px";
+editButton.style.cursor = "pointer";
+
+editButton.onclick = async function() {
+    const bankName = prompt("Bank Name:", card.bank_name);
+    if (bankName === null) return;
+
+    const cardName = prompt("Card Name:", card.card_name);
+    if (cardName === null) return;
+
+    const limitInput = prompt("Credit Limit:", card.credit_limit);
+    if (limitInput === null) return;
+
+    const outstandingInput = prompt(
+        "Outstanding Amount:",
+        card.outstanding
+    );
+    if (outstandingInput === null) return;
+
+    const creditLimit = Number(limitInput);
+    const outstanding = Number(outstandingInput);
+
+    if (
+        !bankName.trim() ||
+        !cardName.trim() ||
+        !limitInput.trim() ||
+        !outstandingInput.trim() ||
+        !Number.isFinite(creditLimit) ||
+        creditLimit <= 0 ||
+        !Number.isFinite(outstanding) ||
+        outstanding <= 0 ||
+        outstanding > creditLimit
+    ) {
+        alert("Please enter valid card details.");
+        return;
+    }
+
+    try {
+        const response = await fetch("/cards/" + card.id, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                bank_name: bankName.trim(),
+                card_name: cardName.trim(),
+                credit_limit: creditLimit,
+                outstanding: outstanding
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error("Update failed");
+        }
+
+        alert("Card updated successfully!");
+        loadDashboard();
+
+    } catch (error) {
+        alert("Unable to update card.");
+    }
+};
+
+box.appendChild(editButton);
+
+box.appendChild(deleteButton);
+cardList.appendChild(box);
+                
+
+           
+                });
+            } catch (error) {
+                cardList.textContent = "Error loading cards.";
+            }
+        }
+
+        loadDashboard();
+    </script>
+    
+<script>
+async function loadTransactions() {
+    const table = document.getElementById("transactionList");
+
+    try {
+        const response = await fetch("/transactions");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch transactions");
+        }
+
+        const data = await response.json();
+        table.innerHTML = "";
+
+        if (data.transactions.length === 0) {
+            const row = table.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 5;
+            cell.textContent = "No transactions found.";
+            return;
+        }
+
+        data.transactions.forEach(transaction => {
+            const row = table.insertRow();
+
+            const values = [
+                transaction.transaction_date,
+                transaction.bank_name + " - " + transaction.card_name,
+                transaction.merchant,
+                transaction.category,
+                "₹" + Number(transaction.amount).toLocaleString("en-IN")
+            ];
+
+            values.forEach(value => {
+                const cell = row.insertCell();
+                cell.textContent = value;
+                cell.style.padding = "12px";
+                cell.style.borderBottom = "1px solid #39465e";
+            });
+             
+            const deleteCell = row.insertCell();
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Delete";
+            deleteButton.style.background = "#ef4444";
+            deleteButton.style.color = "white";
+            deleteButton.style.border = "none";
+            deleteButton.style.borderRadius = "6px";
+            deleteButton.style.padding = "6px 10px";
+            deleteButton.style.cursor = "pointer";
+
+            deleteButton.onclick = async function() {
+                const confirmed = confirm(
+                    "Are you sure you want to delete this transaction?"
+                );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(
+                        "/transactions/" + transaction.id,
+                        {
+                            method: "DELETE"
+                        }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error("Delete failed");
+                    }
+
+                    alert("Transaction deleted successfully!");
+                    loadTransactions();
+
+                } catch (error) {
+                    alert("Unable to delete transaction.");
+                }
+            };
+
+            deleteCell.appendChild(deleteButton);
+             
+
+             
+            
+const editButton = document.createElement("button");
+
+editButton.textContent = "Edit";
+editButton.style.background = "#8b5cf6";
+editButton.style.color = "white";
+editButton.style.padding = "8px 14px";
+editButton.style.border = "none";
+editButton.style.borderRadius = "6px";
+editButton.style.marginLeft = "8px";
+editButton.style.cursor = "pointer";
+
+editButton.onclick = async function() {
+
+    const merchant = prompt(
+        "Merchant Name:",
+        transaction.merchant
+    );
+    if (merchant === null) return;
+
+    const category = prompt(
+        "Category:",
+        transaction.category
+    );
+    if (category === null) return;
+
+    const amountInput = prompt(
+        "Amount:",
+        transaction.amount
+    );
+    if (amountInput === null) return;
+
+    const dateInput = prompt(
+        "Transaction Date (YYYY-MM-DD):",
+        transaction.transaction_date
+    );
+    if (dateInput === null) return;
+
+    const amount = Number(amountInput);
+
+    if (
+        !merchant.trim() ||
+        !category.trim() ||
+        !amountInput.trim() ||
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(dateInput) ||
+        Number.isNaN(Date.parse(dateInput))
+    ) {
+        alert("Please enter valid transaction details.");
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/transactions/" + transaction.id,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    card_id: transaction.card_id,
+                    merchant: merchant.trim(),
+                    category: category.trim(),
+                    amount: amount,
+                    transaction_date: dateInput
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Update failed");
+        }
+
+        alert("Transaction updated successfully!");
+        loadTransactions();
+
+    } catch (error) {
+        alert("Unable to update transaction.");
+    }
+};
+
+deleteCell.appendChild(editButton);
+
+        });
+
+    } catch (error) {
+        table.innerHTML = "";
+        const row = table.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 5;
+        cell.textContent = "Unable to load transactions.";
+    }
+}
+
+loadTransactions();
+</script>
+
+
+<section class="card" style="margin-top: 30px;">
+    <h2>Add Transaction</h2>
+
+    <form id="transactionForm">
+        <p>Credit Card</p>
+        <select id="transactionCard" required>
+            <option value="">Select Credit Card</option>
+        </select>
+
+        <p>Merchant Name</p>
+        <input id="merchant" placeholder="Amazon" required>
+
+        <p>Category</p>
+        <select id="category" required>
+            <option value="Shopping">Shopping</option>
+            <option value="Food">Food</option>
+            <option value="Travel">Travel</option>
+            <option value="Bills">Bills</option>
+            <option value="Others">Others</option>
+        </select>
+
+        <p>Amount</p>
+        <input id="transactionAmount"
+               type="number" min="0.01" step="0.01" required>
+
+        <p>Transaction Date</p>
+        <input id="transactionDate" type="date" required>
+
+        <br><br>
+        <button type="submit">Add Transaction</button>
+    </form>
+
+    <p id="transactionMessage"></p>
+</section>
+
+<script>
+async function loadCardOptions() {
+    const response = await fetch("/card-summary");
+    const data = await response.json();
+
+    const dropdown = document.getElementById("transactionCard");
+    dropdown.innerHTML = '<option value="">Select Credit Card</option>';
+
+    data.cards.forEach(card => {
+        const option = document.createElement("option");
+        option.value = card.id;
+        option.textContent = card.bank_name + " - " + card.card_name;
+        dropdown.appendChild(option);
+    });
+}
+
+document.getElementById("transactionDate").value =
+    new Date().toLocaleDateString("en-CA");
+
+document.getElementById("transactionForm").addEventListener(
+    "submit",
+    async function(event) {
+        event.preventDefault();
+
+        const message = document.getElementById("transactionMessage");
+
+        const transaction = {
+            card_id: Number(
+                document.getElementById("transactionCard").value
+            ),
+            merchant: document.getElementById("merchant").value,
+            category: document.getElementById("category").value,
+            amount: Number(
+                document.getElementById("transactionAmount").value
+            ),
+            transaction_date:
+                document.getElementById("transactionDate").value
+        };
+
+        try {
+            const response = await fetch("/transactions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(transaction)
+            });
+
+            if (!response.ok) {
+                throw new Error("Transaction could not be saved");
+            }
+
+            message.textContent = "Transaction added successfully!";
+            document.getElementById("transactionForm").reset();
+
+            loadTransactions();
+
+        } catch (error) {
+            message.textContent = "Unable to add transaction.";
+        }
+    }
+);
+
+loadCardOptions();
+</script>
+
+
+</body>
+</html>

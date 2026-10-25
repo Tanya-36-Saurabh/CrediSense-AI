@@ -23,3 +23,8 @@ __pycache__/
 # Frontend dependencies
 node_modules/
 .next/
+
+*.pkl
+*.joblib
+
+backend/monthly_spending.csv

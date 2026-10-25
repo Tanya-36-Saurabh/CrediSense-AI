@@ -2,9 +2,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 import sqlite3
+from reward_engine import router as reward_router
 
 app = FastAPI(title="CrediSense AI")
-
+app.include_router(reward_router)
 
 class CreditCard(BaseModel):
     bank_name: str
@@ -539,4 +540,258 @@ def update_transaction(transaction_id: int, transaction: Transaction):
         "transaction_id": transaction_id
     }
 
+
+
+@app.get("/spending-analytics")
+def spending_analytics():
+    conn = sqlite3.connect("credisense.db")
+    cursor = conn.cursor()
+
+    # Category-wise total spending
+    cursor.execute("""
+        SELECT category, SUM(amount)
+        FROM transactions
+        GROUP BY category
+        ORDER BY SUM(amount) DESC
+    """)
+
+    categories = cursor.fetchall()
+
+    # Total spending and transaction count
+    cursor.execute("""
+        SELECT COUNT(*), COALESCE(SUM(amount), 0)
+        FROM transactions
+    """)
+
+    total_transactions, total_spending = cursor.fetchone()
+
+    conn.close()
+
+    result = []
+
+    for category, amount in categories:
+        result.append({
+            "category": category,
+            "total_amount": round(amount, 2)
+        })
+
+    return {
+        "total_transactions": total_transactions,
+        "total_spending": round(total_spending, 2),
+        "category_wise_spending": result
+    }
+
+    
+@app.get("/monthly-spending")
+def monthly_spending():
+    conn = sqlite3.connect("credisense.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            substr(transaction_date, 1, 7) AS month,
+            SUM(amount) AS total_amount,
+            COUNT(*) AS transaction_count
+        FROM transactions
+        GROUP BY substr(transaction_date, 1, 7)
+        ORDER BY month
+    """)
+
+    data = cursor.fetchall()
+    conn.close()
+
+    result = []
+
+    for month, total_amount, count in data:
+        result.append({
+            "month": month,
+            "total_spending": round(total_amount, 2),
+            "total_transactions": count
+        })
+
+    return {
+        "monthly_spending": result
+    }
+
+
+
+class CardReward(BaseModel):
+    card_id: int = Field(gt=0)
+    category: str = Field(min_length=1)
+    reward_percent: float = Field(ge=0, le=100)
+
+
+@app.post("/card-rewards")
+def add_card_reward(reward: CardReward):
+    conn = sqlite3.connect("credisense.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT id FROM cards WHERE id = ?",
+        (reward.card_id,)
+    )
+
+    if cursor.fetchone() is None:
+        conn.close()
+        raise HTTPException(
+            status_code=404,
+            detail="Credit card not found"
+        )
+
+    category = reward.category.strip().title()
+
+    if not category:
+        conn.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Category cannot be empty"
+        )
+
+    cursor.execute(
+        """
+        INSERT INTO card_rewards
+        (card_id, category, reward_percent)
+        VALUES (?, ?, ?)
+        ON CONFLICT(card_id, category)
+        DO UPDATE SET reward_percent = excluded.reward_percent
+        """,
+        (
+            reward.card_id,
+            category,
+            reward.reward_percent
+        )
+    )
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "message": "Card reward saved successfully",
+        "card_id": reward.card_id,
+        "category": category,
+        "reward_percent": reward.reward_percent
+    }
+
+
+
+class PurchaseRequest(BaseModel):
+    category: str = Field(min_length=1)
+    amount: float = Field(gt=0)
+
+
+@app.post("/recommend-card")
+def recommend_card(purchase: PurchaseRequest):
+    category = purchase.category.strip().title()
+
+    if not category:
+        raise HTTPException(
+            status_code=400,
+            detail="Category cannot be empty"
+        )
+
+    conn = sqlite3.connect("credisense.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            cards.id,
+            cards.bank_name,
+            cards.card_name,
+            cards.credit_limit,
+            cards.outstanding,
+            reward_catalog.reward_percent
+        FROM cards
+        JOIN reward_catalog
+            ON LOWER(TRIM(cards.bank_name)) =
+               LOWER(TRIM(reward_catalog.bank_name))
+            AND LOWER(TRIM(cards.card_name)) =
+                LOWER(TRIM(reward_catalog.card_name))
+        WHERE LOWER(TRIM(reward_catalog.category)) =
+              LOWER(?)
+    """, (category,))
+
+    cards = cursor.fetchall()
+    conn.close()
+
+    recommendations = []
+
+    for card in cards:
+        available = card["credit_limit"] - card["outstanding"]
+
+        if available < purchase.amount:
+            continue
+
+        cashback = purchase.amount * card["reward_percent"] / 100
+
+        recommendations.append({
+            "card_id": card["id"],
+            "bank_name": card["bank_name"],
+            "card_name": card["card_name"],
+            "reward_percent": card["reward_percent"],
+            "estimated_cashback": round(cashback, 2),
+            "available_limit": round(available, 2)
+        })
+
+    recommendations.sort(
+        key=lambda item: item["estimated_cashback"],
+        reverse=True
+    )
+
+    return {
+        "category": category,
+        "purchase_amount": purchase.amount,
+        "best_card": recommendations[0] if recommendations else None,
+        "recommendations": recommendations
+    }
+
+
+@app.get("/card-rewards")
+def get_card_rewards():
+    conn = sqlite3.connect("credisense.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            card_rewards.id,
+            card_rewards.card_id,
+            cards.bank_name,
+            cards.card_name,
+            card_rewards.category,
+            card_rewards.reward_percent
+        FROM card_rewards
+        JOIN cards
+        ON card_rewards.card_id = cards.id
+        ORDER BY cards.bank_name, card_rewards.category
+    """)
+
+    rewards = cursor.fetchall()
+    conn.close()
+
+    return {
+        "total_rewards": len(rewards),
+        "rewards": [dict(reward) for reward in rewards]
+    }
+
+
+@app.get("/reward-catalog")
+def get_reward_catalog():
+    conn = sqlite3.connect("credisense.db")
+    conn.row_factory = sqlite3.Row
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT bank_name, card_name, category, reward_percent
+        FROM reward_catalog
+        ORDER BY bank_name, card_name, category
+    """)
+
+    rewards = cursor.fetchall()
+    conn.close()
+
+    return {
+        "total_rewards": len(rewards),
+        "rewards": [dict(reward) for reward in rewards]
+    }
 

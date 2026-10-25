@@ -788,6 +788,351 @@ document.getElementById("transactionForm").addEventListener(
 loadCardOptions();
 </script>
 
+<section class="card" style="margin-top: 30px;">
+    <h2>Spending Analytics</h2>
+
+    <h3 id="totalSpending">Total Spending: ₹0</h3>
+
+    <p id="transactionCount">Total Transactions: 0</p>
+
+    <div id="spendingChart"></div>
+</section>
+
+<script>
+async function loadSpendingAnalytics() {
+    const chart = document.getElementById("spendingChart");
+
+    try {
+        const response = await fetch("/spending-analytics");
+        if (!response.ok) {
+            throw new Error("Unable to load spending data");
+        }
+
+        const data = await response.json();
+
+        document.getElementById("totalSpending").textContent =
+            "Total Spending: ₹" +
+            Number(data.total_spending).toLocaleString("en-IN");
+
+        document.getElementById("transactionCount").textContent =
+            "Total Transactions: " + data.total_transactions;
+
+        chart.innerHTML = "";
+
+        const categories = data.category_wise_spending;
+
+        if (categories.length === 0) {
+            chart.textContent = "No spending data available.";
+            return;
+        }
+
+        const maximum = Math.max(
+            ...categories.map(item => item.total_amount)
+        );
+
+        categories.forEach(item => {
+            const label = document.createElement("p");
+            label.textContent =
+                item.category + " — ₹" +
+                Number(item.total_amount).toLocaleString("en-IN");
+
+            const bar = document.createElement("div");
+            bar.style.background = "#39465e";
+            bar.style.height = "18px";
+            bar.style.borderRadius = "10px";
+            bar.style.marginBottom = "20px";
+            bar.style.overflow = "hidden";
+
+            const fill = document.createElement("div");
+            fill.style.background = "#a78bfa";
+            fill.style.height = "100%";
+            fill.style.width =
+                (item.total_amount / maximum * 100) + "%";
+
+            bar.appendChild(fill);
+            chart.appendChild(label);
+            chart.appendChild(bar);
+        });
+
+    } catch (error) {
+        chart.textContent = "Unable to load spending analytics.";
+        console.error(error);
+    }
+}
+
+loadSpendingAnalytics();
+</script>
+
+
+<section class="card" style="margin-top: 30px;">
+    <h2>Monthly Spending Analytics</h2>
+    <div id="monthlyChart">
+        <p>Loading monthly spending...</p>
+    </div>
+</section>
+
+<script>
+async function loadMonthlySpending() {
+    const chart = document.getElementById("monthlyChart");
+
+    try {
+        const response = await fetch("/monthly-spending");
+
+        if (!response.ok) {
+            throw new Error("Unable to fetch monthly spending");
+        }
+
+        const data = await response.json();
+        chart.innerHTML = "";
+
+        if (data.monthly_spending.length === 0) {
+            chart.textContent = "No monthly spending data found.";
+            return;
+        }
+
+        const maximum = Math.max(
+            ...data.monthly_spending.map(item => item.total_spending)
+        );
+
+        data.monthly_spending.forEach(item => {
+            const container = document.createElement("div");
+            container.style.marginBottom = "20px";
+
+            const label = document.createElement("p");
+            label.textContent =
+                item.month + " — ₹" +
+                Number(item.total_spending).toLocaleString("en-IN");
+
+            const bar = document.createElement("div");
+            bar.style.background = "#39465e";
+            bar.style.height = "20px";
+            bar.style.borderRadius = "10px";
+            bar.style.overflow = "hidden";
+
+            const fill = document.createElement("div");
+            fill.style.background = "#a78bfa";
+            fill.style.height = "100%";
+            fill.style.width = (
+                maximum > 0
+                ? item.total_spending / maximum * 100
+                : 0
+            ) + "%";
+
+            bar.appendChild(fill);
+            container.appendChild(label);
+            container.appendChild(bar);
+            chart.appendChild(container);
+        });
+
+    } catch (error) {
+        chart.textContent = "Unable to load monthly spending.";
+        console.error(error);
+    }
+}
+
+loadMonthlySpending();
+</script>
+
+
+<section class="card" style="margin-top: 30px;">
+    <h2>AI Credit Card Recommendation</h2>
+
+    <p>Find the best credit card for your purchase.</p>
+
+    <form id="recommendForm">
+        <p>Purchase Category</p>
+        <select id="recommendCategory" required>
+            <option value="Shopping">Shopping</option>
+            <option value="Food">Food</option>
+            <option value="Travel">Travel</option>
+            <option value="Bills">Bills</option>
+            <option value="Others">Others</option>
+        </select>
+
+        <p>Purchase Amount</p>
+        <input
+            id="recommendAmount"
+            type="number"
+            min="1"
+            step="0.01"
+            placeholder="10000"
+            required
+        >
+
+        <br><br>
+        <button type="submit">Find Best Card</button>
+    </form>
+
+    <div id="recommendResult" style="margin-top:20px;"></div>
+</section>
+
+<script>
+document.getElementById("recommendForm").addEventListener(
+    "submit",
+    async function(event) {
+        event.preventDefault();
+
+        const category =
+            document.getElementById("recommendCategory").value;
+
+        const amount = Number(
+            document.getElementById("recommendAmount").value
+        );
+
+        const result = document.getElementById("recommendResult");
+        result.textContent = "Finding best card...";
+
+        try {
+            const response = await fetch("/recommend-card", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    category: category,
+                    amount: amount
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Recommendation failed");
+            }
+
+            const data = await response.json();
+            result.innerHTML = "";
+
+            if (!data.best_card) {
+                result.textContent =
+                    "No eligible card found. Check reward rates and available limits.";
+                return;
+            }
+
+            const title = document.createElement("h3");
+            title.textContent =
+                "Recommended: " +
+                data.best_card.bank_name + " - " +
+                data.best_card.card_name;
+
+            const cashback = document.createElement("p");
+            cashback.textContent =
+                "Estimated Cashback: ₹" +
+                Number(data.best_card.estimated_cashback)
+                    .toLocaleString("en-IN");
+
+            const rate = document.createElement("p");
+            rate.textContent =
+                "Reward Rate: " +
+                data.best_card.reward_percent + "%";
+
+            result.appendChild(title);
+            result.appendChild(cashback);
+            result.appendChild(rate);
+
+            const heading = document.createElement("h4");
+            heading.textContent = "Other Eligible Cards";
+            result.appendChild(heading);
+
+            data.recommendations.slice(1).forEach(card => {
+                const item = document.createElement("p");
+                item.textContent =
+                    card.bank_name + " - " + card.card_name +
+                    " | Cashback: ₹" +
+                    Number(card.estimated_cashback)
+                        .toLocaleString("en-IN");
+                result.appendChild(item);
+            });
+
+        } catch (error) {
+            result.textContent =
+                "Unable to calculate recommendation.";
+            console.error(error);
+        }
+    }
+);
+</script>
+
+
+
+    
+        
+
+<section class="card" style="margin-top:30px;">
+    <h2>Credit Card Rewards Catalog</h2>
+    <p>Available reward rates for supported credit cards.</p>
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="padding:12px; text-align:left;">Bank</th>
+                    <th style="padding:12px; text-align:left;">Card</th>
+                    <th style="padding:12px; text-align:left;">Category</th>
+                    <th style="padding:12px; text-align:left;">Reward Rate</th>
+                </tr>
+            </thead>
+
+            <tbody id="rewardCatalogList">
+                <tr>
+                    <td colspan="4">Loading rewards...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<script>
+async function loadRewardCatalog() {
+    const table = document.getElementById("rewardCatalogList");
+
+    try {
+        const response = await fetch("/reward-catalog");
+
+        if (!response.ok) {
+            throw new Error("Failed to load rewards");
+        }
+
+        const data = await response.json();
+        table.innerHTML = "";
+
+        if (data.rewards.length === 0) {
+            const row = table.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 4;
+            cell.textContent = "No rewards available.";
+            return;
+        }
+
+        data.rewards.forEach(reward => {
+            const row = table.insertRow();
+
+            const values = [
+                reward.bank_name,
+                reward.card_name,
+                reward.category,
+                reward.reward_percent + "%"
+            ];
+
+            values.forEach(value => {
+                const cell = row.insertCell();
+                cell.textContent = value;
+                cell.style.padding = "12px";
+                cell.style.borderBottom = "1px solid #39465e";
+            });
+        });
+
+    } catch (error) {
+        table.innerHTML = "";
+        const row = table.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 4;
+        cell.textContent = "Unable to load reward catalog.";
+    }
+}
+
+loadRewardCatalog();
+</script>
+
 
 </body>
 </html>
+

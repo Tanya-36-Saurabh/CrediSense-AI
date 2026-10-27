@@ -1133,6 +1133,123 @@ loadRewardCatalog();
 </script>
 
 
+<section class="card" style="margin-top:30px;">
+    <h2>AI Spending Prediction</h2>
+    <p>Next month's estimated spending using Random Forest.</p>
+
+    <h1 id="mlPredictionAmount">Loading...</h1>
+
+    <p id="mlPredictionStatus">
+        Checking ML prediction...
+    </p>
+
+    <small>
+        Demo prediction using synthetic training data.
+        Not a real financial forecast.
+    </small>
+</section>
+
+<script>
+async function loadMLPrediction() {
+    const amountElement = document.getElementById("mlPredictionAmount");
+    const statusElement = document.getElementById("mlPredictionStatus");
+
+    try {
+        const response = await fetch("/api/ml/predict-spending");
+
+        if (!response.ok) {
+            throw new Error("Prediction API unavailable");
+        }
+
+        const data = await response.json();
+
+        const amount = Number(data.predicted_spending);
+
+        amountElement.textContent = amount.toLocaleString("en-IN", {
+            style: "currency",
+            currency: "INR"
+        });
+
+        statusElement.textContent =
+            "Model: " + data.model + " | Status: Demo Prediction";
+
+    } catch (error) {
+        amountElement.textContent = "Unavailable";
+        statusElement.textContent = "Unable to load ML prediction.";
+    }
+}
+
+loadMLPrediction();
+</script>
+
+
+<section class="card" style="margin-top:30px;">
+    <h2>AI Spending Pattern Analysis</h2>
+    <p>Analyse monthly spending using K-Means clustering.</p>
+
+    <label for="clusterAmount">Monthly Spending (₹)</label>
+    <input
+        type="number"
+        id="clusterAmount"
+        min="0"
+        value="20000"
+        placeholder="Enter monthly spending"
+    >
+
+    <button type="button" onclick="classifySpending()">
+        Analyse Spending
+    </button>
+
+    <h3 id="clusterResult">Your spending pattern will appear here.</h3>
+
+    <small>
+        Demo ML model trained on synthetic spending data.
+        Results are not a financial risk assessment.
+    </small>
+</section>
+
+<script>
+async function classifySpending() {
+    const amount = Number(
+        document.getElementById("clusterAmount").value
+    );
+
+    const result = document.getElementById("clusterResult");
+
+    if (!Number.isFinite(amount) || amount < 0) {
+        result.textContent = "Enter a valid amount.";
+        return;
+    }
+
+    result.textContent = "Analysing...";
+
+    try {
+        const response = await fetch("/api/ml/classify-spending", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                monthly_spending: amount
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error("ML API error");
+        }
+
+        const data = await response.json();
+
+        result.textContent =
+            "Spending Pattern: " + data.spending_pattern;
+
+    } catch (error) {
+        result.textContent = "Unable to analyse spending.";
+    }
+}
+</script>
+
+
 </body>
 </html>
 

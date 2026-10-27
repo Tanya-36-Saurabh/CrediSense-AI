@@ -101,6 +101,22 @@ conn.commit()
 
 print("Reward caps updated successfully!")
 
+columns = conn.execute(
+    "PRAGMA table_info(transactions)"
+).fetchall()
+
+column_names = [column[1] for column in columns]
+
+if "balance_applied" not in column_names:
+    conn.execute("""
+        ALTER TABLE transactions
+        ADD COLUMN balance_applied INTEGER NOT NULL DEFAULT 0
+    """)
+
+conn.commit()
+
+print("Transaction balance tracking enabled!")
+
 conn.close()
 
 print("Database created successfully!")

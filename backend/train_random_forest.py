@@ -13,7 +13,7 @@ from sklearn.metrics import (
 
 BASE_DIR = Path(__file__).resolve().parent
 
-DATA_PATH = BASE_DIR / "monthly_spending.csv"
+DATA_PATH = BASE_DIR / "demo_monthly_spending.csv"
 MODEL_PATH = BASE_DIR / "random_forest_model.pkl"
 
 

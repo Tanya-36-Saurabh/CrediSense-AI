@@ -1250,6 +1250,70 @@ async function classifySpending() {
 </script>
 
 
+<section style="margin: 25px 0; padding: 20px; background: #1e293b; color: white; border-radius: 12px;">
+    <h2>AI Transaction Anomaly Detection</h2>
+
+    <p>Check whether a transaction amount looks unusual.</p>
+
+    <input
+        type="number"
+        id="anomalyAmount"
+        placeholder="Enter transaction amount"
+        min="1"
+        style="padding: 10px; border-radius: 6px;"
+    >
+
+    <button onclick="detectAnomaly()" style="padding: 10px;">
+        Detect Anomaly
+    </button>
+
+    <p id="anomalyResult"></p>
+
+    <small>
+        Demo ML model trained on synthetic transactions.
+        Unusual does not necessarily mean fraudulent.
+    </small>
+</section>
+
+<script>
+async function detectAnomaly() {
+    const result = document.getElementById("anomalyResult");
+    const amount = Number(document.getElementById("anomalyAmount").value);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+        result.textContent = "Please enter a valid positive amount.";
+        return;
+    }
+
+    result.textContent = "Checking transaction...";
+
+    try {
+        const response = await fetch("/api/ml/detect-anomaly", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ amount: amount })
+        });
+
+        if (!response.ok) {
+            throw new Error("API request failed");
+        }
+
+        const data = await response.json();
+
+        result.textContent =
+            "₹" + amount.toLocaleString("en-IN") +
+            " — " + data.status +
+            " (Score: " + data.anomaly_score + ")";
+
+        result.style.color = data.is_anomaly ? "#fca5a5" : "#86efac";
+
+    } catch (error) {
+        result.textContent = "Unable to check transaction.";
+        result.style.color = "#fca5a5";
+    }
+}
+</script>
 </body>
 </html>
-

@@ -2,6 +2,7 @@ from contextlib import contextmanager
 from datetime import date
 from ml_prediction import router as ml_router
 from ml_clustering import router as clustering_router
+from ml_anomaly import router as anomaly_router
 from pathlib import Path
 import sqlite3
 
@@ -16,6 +17,8 @@ app = FastAPI(title='CrediSense AI')
 app.include_router(reward_router)
 app.include_router(ml_router)
 app.include_router(clustering_router)
+app.include_router(anomaly_router)
+
 
 @contextmanager
 def database():

@@ -1315,5 +1315,100 @@ async function detectAnomaly() {
     }
 }
 </script>
+
+
+<section style="margin: 25px 0; padding: 20px; background: #1e293b; color: white; border-radius: 12px;">
+    <h2>AI Financial Insights</h2>
+
+    <p>Compare your spending between two months.</p>
+
+    <input
+        type="number"
+        id="currentMonthSpending"
+        placeholder="Current month spending"
+        min="0"
+        style="padding: 10px; border-radius: 6px;"
+    >
+
+    <input
+        type="number"
+        id="previousMonthSpending"
+        placeholder="Previous month spending"
+        min="0"
+        style="padding: 10px; border-radius: 6px;"
+    >
+
+    <button onclick="getFinancialInsights()" style="padding: 10px;">
+        Generate Insights
+    </button>
+
+    <p id="financialInsightsResult"></p>
+
+    <small>
+        Insights are generated using rule-based analysis.
+        They are not personalised financial advice.
+    </small>
+</section>
+
+<script>
+async function getFinancialInsights() {
+    const result = document.getElementById("financialInsightsResult");
+
+    const currentInput = document.getElementById("currentMonthSpending");
+    const previousInput = document.getElementById("previousMonthSpending");
+
+    const current = Number(currentInput.value);
+    const previous = Number(previousInput.value);
+
+    if (
+        currentInput.value.trim() === "" ||
+        previousInput.value.trim() === "" ||
+        !Number.isFinite(current) ||
+        !Number.isFinite(previous) ||
+        current < 0 ||
+        previous < 0
+    ) {
+        result.textContent = "Please enter valid spending amounts.";
+        return;
+    }
+
+    result.textContent = "Generating insights...";
+
+    try {
+        const response = await fetch("/api/insights/monthly", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                current_month: current,
+                previous_month: previous
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error("Request failed");
+        }
+
+        const data = await response.json();
+
+        const difference = Number(data.difference).toLocaleString("en-IN");
+
+        const change = data.percentage_change === null
+            ? "Not available"
+            : data.percentage_change + "%";
+
+        result.textContent =
+            "Difference: ₹" + difference +
+            " | Change: " + change +
+            " | " + data.insight;
+
+    } catch (error) {
+        result.textContent = "Unable to generate insights.";
+    }
+}
+</script>
+
+
 </body>
 </html>

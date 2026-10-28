@@ -2,6 +2,7 @@ from contextlib import contextmanager
 from datetime import date
 from ml_prediction import router as ml_router
 from ml_clustering import router as clustering_router
+from financial_insights import router as insights_router
 from ml_anomaly import router as anomaly_router
 from pathlib import Path
 import sqlite3
@@ -18,6 +19,7 @@ app.include_router(reward_router)
 app.include_router(ml_router)
 app.include_router(clustering_router)
 app.include_router(anomaly_router)
+app.include_router(insights_router)
 
 
 @contextmanager

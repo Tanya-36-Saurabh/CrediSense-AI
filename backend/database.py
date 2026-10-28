@@ -117,6 +117,25 @@ conn.commit()
 
 print("Transaction balance tracking enabled!")
 
+
+# Add minimum transaction requirement if missing
+columns = conn.execute(
+    "PRAGMA table_info(reward_catalog)"
+).fetchall()
+
+column_names = [column[1] for column in columns]
+
+if "min_transaction" not in column_names:
+    conn.execute("""
+        ALTER TABLE reward_catalog
+        ADD COLUMN min_transaction REAL NOT NULL DEFAULT 0
+    """)
+
+conn.commit()
+
+print("Minimum transaction eligibility enabled!")
+
+
 conn.close()
 
 print("Database created successfully!")

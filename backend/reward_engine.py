@@ -44,7 +44,7 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
             rows = conn.execute("""
                 SELECT c.id AS card_id, c.bank_name, c.card_name,
                        c.credit_limit, c.outstanding,
-                       r.reward_percent, r.max_cashback
+                       r.reward_percent, r.max_cashback, r.min_transaction
                 FROM cards AS c
                 JOIN reward_catalog AS r
                   ON LOWER(TRIM(c.bank_name)) = LOWER(TRIM(r.bank_name))
@@ -57,6 +57,10 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
     recommendations = []
     for row in rows:
         available = float(row["credit_limit"]) - float(row["outstanding"])
+        minimum = float(row["min_transaction"])
+
+        if purchase.amount < minimum:
+            continue
         rate = float(row["reward_percent"])
         cap: Optional[float] = row["max_cashback"]
         if available < purchase.amount or not (0 <= rate <= 100):
@@ -66,6 +70,7 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
         raw_reward = purchase.amount * rate / 100
         estimate = min(raw_reward, float(cap)) if cap is not None else raw_reward
         recommendations.append({
+            "min_transaction": minimum,
             "card_id": row["card_id"],
             "bank_name": row["bank_name"],
             "card_name": row["card_name"],

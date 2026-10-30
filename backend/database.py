@@ -136,6 +136,24 @@ conn.commit()
 print("Minimum transaction eligibility enabled!")
 
 
+# Add merchant eligibility support
+columns = conn.execute(
+    "PRAGMA table_info(reward_catalog)"
+).fetchall()
+
+column_names = [column[1] for column in columns]
+
+if "eligible_merchant" not in column_names:
+    conn.execute("""
+        ALTER TABLE reward_catalog
+        ADD COLUMN eligible_merchant TEXT
+    """)
+
+conn.commit()
+
+print("Merchant eligibility enabled!")
+
+
 conn.close()
 
 print("Database created successfully!")

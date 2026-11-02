@@ -1410,5 +1410,136 @@ async function getFinancialInsights() {
 </script>
 
 
+<!-- Credit Card Bill Management -->
+<section style="margin: 25px 0; padding: 20px; background: #1e293b; color: white; border-radius: 12px;">
+    <h2>Credit Card Bill Management</h2>
+    <p>View bills, due dates and payment status.</p>
+
+    <button onclick="loadBills()" style="padding: 10px;">
+        Refresh Bills
+    </button>
+
+    <div id="billsList" style="margin-top: 15px;">
+        Loading bills...
+    </div>
+</section>
+
+<script>
+async function loadBills() {
+    const container = document.getElementById("billsList");
+    container.textContent = "Loading bills...";
+
+    try {
+        const response = await fetch("/api/bills");
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch bills");
+        }
+
+        const data = await response.json();
+
+        container.replaceChildren();
+
+        if (!data.bills || data.bills.length === 0) {
+            container.textContent = "No bills available.";
+            return;
+        }
+
+        for (const bill of data.bills) {
+            const card = document.createElement("div");
+
+            card.style.cssText =
+                "padding:15px;margin:10px 0;" +
+                "background:#334155;border-radius:8px;";
+
+            const heading = document.createElement("h3");
+            heading.textContent =
+                bill.bank_name + " " + bill.card_name;
+
+            const amount = document.createElement("p");
+            amount.textContent =
+                "Bill Amount: ₹" +
+                Number(bill.bill_amount).toLocaleString("en-IN");
+
+            const dueDate = document.createElement("p");
+            dueDate.textContent = "Due Date: " + bill.due_date;
+
+            const status = document.createElement("p");
+            status.textContent = "Status: " + bill.status;
+
+            const historyButton = document.createElement("button");
+            historyButton.textContent = "View Payment History";
+            historyButton.style.padding = "8px";
+
+            const historyResult = document.createElement("div");
+            historyResult.style.marginTop = "10px";
+
+            historyButton.addEventListener("click", async () => {
+                historyResult.textContent = "Loading payments...";
+
+                try {
+                    const res = await fetch(
+                        "/api/bills/" + bill.id + "/payments"
+                    );
+
+                    if (!res.ok) {
+                        throw new Error("Failed to load payments");
+                    }
+
+                    const history = await res.json();
+
+                    historyResult.replaceChildren();
+
+                    const summary = document.createElement("p");
+                    summary.textContent =
+                        "Paid: ₹" +
+                        Number(history.total_paid).toLocaleString("en-IN") +
+                        " | Remaining: ₹" +
+                        Number(history.remaining_amount).toLocaleString("en-IN");
+
+                    historyResult.appendChild(summary);
+
+                    for (const payment of history.payments) {
+                        const line = document.createElement("p");
+                        line.textContent =
+                            "₹" +
+                            Number(payment.amount).toLocaleString("en-IN") +
+                            " paid on " + payment.payment_date;
+
+                        historyResult.appendChild(line);
+                    }
+
+                    if (history.payments.length === 0) {
+                        const empty = document.createElement("p");
+                        empty.textContent = "No payments recorded.";
+                        historyResult.appendChild(empty);
+                    }
+
+                } catch (error) {
+                    historyResult.textContent =
+                        "Unable to load payment history.";
+                }
+            });
+
+            card.append(
+                heading,
+                amount,
+                dueDate,
+                status,
+                historyButton,
+                historyResult
+            );
+
+            container.appendChild(card);
+        }
+
+    } catch (error) {
+        container.textContent = "Unable to load bills.";
+    }
+}
+
+loadBills();
+</script>
+
 </body>
 </html>

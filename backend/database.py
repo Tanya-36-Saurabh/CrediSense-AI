@@ -154,6 +154,37 @@ conn.commit()
 print("Merchant eligibility enabled!")
 
 
+# Credit card bill tracking
+conn.execute("""
+CREATE TABLE IF NOT EXISTS bills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL,
+    bill_amount REAL NOT NULL CHECK(bill_amount > 0),
+    due_date TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Unpaid'
+        CHECK(status IN ('Unpaid', 'Partial', 'Paid')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (card_id) REFERENCES cards(id)
+)
+""")
+
+# Credit card bill payments
+conn.execute("""
+CREATE TABLE IF NOT EXISTS bill_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bill_id INTEGER NOT NULL,
+    amount REAL NOT NULL CHECK(amount > 0),
+    payment_date TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (bill_id) REFERENCES bills(id)
+)
+""")
+
+conn.commit()
+
+print("Bill and payment tables created successfully!")
+
+
 conn.close()
 
 print("Database created successfully!")

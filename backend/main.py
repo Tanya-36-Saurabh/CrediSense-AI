@@ -8,6 +8,9 @@ from pathlib import Path
 import sqlite3
 
 from fastapi import FastAPI, HTTPException
+
+from bill_management import router as bill_router
+
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 from reward_engine import router as reward_router
@@ -16,6 +19,9 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / 'credisense.db'
 app = FastAPI(title='CrediSense AI')
 app.include_router(reward_router)
+
+app.include_router(bill_router)
+
 app.include_router(ml_router)
 app.include_router(clustering_router)
 app.include_router(anomaly_router)

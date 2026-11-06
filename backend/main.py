@@ -6,11 +6,10 @@ from financial_insights import router as insights_router
 from ml_anomaly import router as anomaly_router
 from pathlib import Path
 import sqlite3
-
 from fastapi import FastAPI, HTTPException
-
 from bill_management import router as bill_router
-
+from auth import router as auth_router, get_current_user
+from fastapi import Depends
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 from reward_engine import router as reward_router
@@ -19,9 +18,8 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / 'credisense.db'
 app = FastAPI(title='CrediSense AI')
 app.include_router(reward_router)
-
 app.include_router(bill_router)
-
+app.include_router(auth_router)
 app.include_router(ml_router)
 app.include_router(clustering_router)
 app.include_router(anomaly_router)
@@ -42,8 +40,6 @@ def database():
         raise
     finally:
         conn.close()
-
-
 
 
 def as_dicts(rows):
@@ -86,13 +82,25 @@ def validate_card(card):
         raise HTTPException(400, 'Outstanding cannot exceed credit limit')
 
 
-def insert_card(card):
+def insert_card(card, user_id):
     validate_card(card)
+
     with database() as conn:
         result = conn.execute(
-            'INSERT INTO cards (bank_name, card_name, credit_limit, outstanding) VALUES (?, ?, ?, ?)',
-            (card.bank_name, card.card_name, card.credit_limit, card.outstanding),
+            """
+            INSERT INTO cards
+            (bank_name, card_name, credit_limit, outstanding, user_id)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                card.bank_name,
+                card.card_name,
+                card.credit_limit,
+                card.outstanding,
+                user_id
+            )
         )
+
         return result.lastrowid
 
 
@@ -107,65 +115,181 @@ def health():
 
 
 @app.post('/cards')
-def add_card(card: CreditCard):
-    return {'message': 'Credit card added successfully', 'card_id': insert_card(card)}
+def add_card(
+    card: CreditCard,
+    current_user=Depends(get_current_user)
+):
+    validate_card(card)
+
+    with database() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO cards (
+                bank_name, card_name, credit_limit,
+                outstanding, user_id
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                card.bank_name,
+                card.card_name,
+                card.credit_limit,
+                card.outstanding,
+                current_user["user_id"]
+            )
+        )
+
+        card_id = cursor.lastrowid
+
+    return {
+        "message": "Credit card added successfully",
+        "card_id": card_id
+    }
 
 
 @app.post('/dashboard/add-card')
-def dashboard_add_card(card: CreditCard):
-    return {'message': 'Card added successfully', 'card_id': insert_card(card)}
+def dashboard_add_card(
+    card: CreditCard,
+    current_user=Depends(get_current_user)
+):
+    card_id = insert_card(
+        card,
+        current_user["user_id"]
+    )
+
+    return {
+        "message": "Card added successfully",
+        "card_id": card_id
+    }
 
 
 @app.get('/cards')
 @app.get('/all-cards')
-def get_cards():
+def get_cards(current_user=Depends(get_current_user)):
+    user_id = current_user["user_id"]
+
     with database() as conn:
-        cards = as_dicts(conn.execute('SELECT * FROM cards').fetchall())
-    return {'total_cards': len(cards), 'cards': cards}
+        cards = as_dicts(
+            conn.execute(
+                """
+                SELECT id, bank_name, card_name,
+                       credit_limit, outstanding
+                FROM cards
+                WHERE user_id = ?
+                ORDER BY id
+                """,
+                (user_id,)
+            ).fetchall()
+        )
+
+    return {
+        "total_cards": len(cards),
+        "cards": cards
+    }
 
 
 @app.put('/cards/{card_id}')
-def update_card(card_id: int, card: CreditCard):
+def update_card(
+    card_id: int,
+    card: CreditCard,
+    current_user=Depends(get_current_user)
+):
     validate_card(card)
+
     with database() as conn:
         result = conn.execute(
-            'UPDATE cards SET bank_name=?, card_name=?, credit_limit=?, outstanding=? WHERE id=?',
-            (card.bank_name, card.card_name, card.credit_limit, card.outstanding, card_id),
+            """
+            UPDATE cards
+            SET bank_name = ?,
+                card_name = ?,
+                credit_limit = ?,
+                outstanding = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (
+                card.bank_name,
+                card.card_name,
+                card.credit_limit,
+                card.outstanding,
+                card_id,
+                current_user["user_id"]
+            )
         )
+
         if not result.rowcount:
-            raise HTTPException(404, 'Card not found')
-    return {'message': 'Card updated successfully', 'card_id': card_id}
+            raise HTTPException(
+                status_code=404,
+                detail="Card not found"
+            )
+
+    return {
+        "message": "Card updated successfully",
+        "card_id": card_id
+    }
 
 
 @app.delete('/cards/{card_id}')
-def delete_card(card_id: int):
+def delete_card(
+    card_id: int,
+    current_user=Depends(get_current_user)
+):
     with database() as conn:
-        result = conn.execute('DELETE FROM cards WHERE id=?', (card_id,))
+        result = conn.execute(
+            """
+            DELETE FROM cards
+            WHERE id = ? AND user_id = ?
+            """,
+            (card_id, current_user["user_id"])
+        )
+
         if not result.rowcount:
-            raise HTTPException(404, 'Card not found')
-    return {'message': 'Card deleted successfully'}
+            raise HTTPException(
+                status_code=404,
+                detail="Card not found"
+            )
+
+    return {
+        "message": "Card deleted successfully"
+    }
 
 
 @app.get('/card-summary')
-def card_summary():
+def card_summary(current_user=Depends(get_current_user)):
     with database() as conn:
         cards = as_dicts(conn.execute(
-            'SELECT id, bank_name, card_name, credit_limit, outstanding FROM cards'
+            """
+            SELECT id, bank_name, card_name, credit_limit, outstanding
+            FROM cards
+            WHERE user_id = ?
+            """,
+            (current_user["user_id"],)
         ).fetchall())
+
     total_limit = sum(c['credit_limit'] for c in cards)
     total_outstanding = sum(c['outstanding'] for c in cards)
+
     for c in cards:
-        c['available_limit'] = round(c['credit_limit'] - c['outstanding'], 2)
-        c['utilization_percent'] = round(100 * c['outstanding'] / c['credit_limit'], 2) if c['credit_limit'] else 0
+        c['available_limit'] = round(
+            c['credit_limit'] - c['outstanding'], 2
+        )
+        c['utilization_percent'] = (
+            round(100 * c['outstanding'] / c['credit_limit'], 2)
+            if c['credit_limit'] else 0
+        )
+
     return {
         'total_cards': len(cards),
         'total_credit_limit': round(total_limit, 2),
         'total_outstanding': round(total_outstanding, 2),
-        'total_available_limit': round(total_limit - total_outstanding, 2),
-        'overall_utilization_percent': round(100 * total_outstanding / total_limit, 2) if total_limit else 0,
+        'total_available_limit': round(
+            total_limit - total_outstanding, 2
+        ),
+        'overall_utilization_percent': (
+            round(100 * total_outstanding / total_limit, 2)
+            if total_limit else 0
+        ),
         'cards': cards,
     }
-
 
 @app.get('/dashboard', include_in_schema=False)
 def dashboard():
@@ -186,15 +310,12 @@ def card_form():
       </form>
     </body></html>'''
 
-
 @app.get('/save-card')
-def save_card(bank_name: str, card_name: str, credit_limit: float, outstanding: float = 0):
-    if credit_limit <= 0 or outstanding < 0 or outstanding > credit_limit:
-        return {'error': 'Invalid card amounts'}
-    insert_card(CreditCard(bank_name=bank_name, card_name=card_name,
-                           credit_limit=credit_limit, outstanding=outstanding))
-    return {'message': 'Credit Card Added Successfully'}
-
+def save_card():
+    raise HTTPException(
+        status_code=410,
+        detail="Legacy save-card route is disabled. Use authenticated POST /cards or /dashboard/add-card."
+    )
 
 def transaction_values(t):
     return (t.card_id, t.merchant.strip(), t.category.strip(),

@@ -185,6 +185,42 @@ conn.commit()
 print("Bill and payment tables created successfully!")
 
 
+# User authentication table
+conn.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER NOT NULL DEFAULT 1
+        CHECK(is_active IN (0, 1))
+)
+""")
+
+conn.commit()
+
+print("User authentication table ready!")
+
+
+# Add user ownership to cards
+columns = conn.execute(
+    "PRAGMA table_info(cards)"
+).fetchall()
+
+column_names = [column[1] for column in columns]
+
+if "user_id" not in column_names:
+    conn.execute("""
+        ALTER TABLE cards
+        ADD COLUMN user_id INTEGER
+        REFERENCES users(id)
+    """)
+
+conn.commit()
+
+print("Card user ownership column ready!")
+
+
 conn.close()
 
 print("Database created successfully!")

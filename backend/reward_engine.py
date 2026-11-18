@@ -1,22 +1,40 @@
 
 """CrediSense AI 2.0 - Reward recommendation engine."""
 
-from pathlib import Path
+import math
 import sqlite3
+from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/api/v2", tags=["Rewards v2"])
+from auth import get_current_user
+
+
+router = APIRouter(
+    prefix="/api/v2",
+    tags=["Rewards v2"]
+)
 
 DB_PATH = Path(__file__).resolve().parent / "credisense.db"
 
 
 class PurchaseRequestV2(BaseModel):
-    category: str = Field(min_length=1, max_length=100)
-    amount: float = Field(gt=0)
-    merchant: Optional[str] = Field(default=None, max_length=100)
+    category: str = Field(
+        min_length=1,
+        max_length=100
+    )
+
+    amount: float = Field(
+        gt=0,
+        allow_inf_nan=False
+    )
+
+    merchant: Optional[str] = Field(
+        default=None,
+        max_length=100
+    )
 
 
 def get_connection():
@@ -28,11 +46,15 @@ def get_connection():
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+
     return conn
 
 
 @router.post("/recommend-card")
-def recommend_card_v2(purchase: PurchaseRequestV2):
+def recommend_card_v2(
+    purchase: PurchaseRequestV2,
+    current_user=Depends(get_current_user)
+):
     category = purchase.category.strip()
 
     if not category:
@@ -40,6 +62,8 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
             status_code=422,
             detail="Category cannot be blank"
         )
+
+    user_id = current_user["user_id"]
 
     with get_connection() as conn:
         try:
@@ -62,7 +86,8 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
                     detail="Reward database migration not applied"
                 )
 
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT
                     c.id AS card_id,
                     c.bank_name,
@@ -80,7 +105,10 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
                     AND LOWER(TRIM(c.card_name)) =
                         LOWER(TRIM(r.card_name))
                 WHERE LOWER(TRIM(r.category)) = LOWER(?)
-            """, (category,)).fetchall()
+                  AND c.user_id = ?
+                """,
+                (category, user_id)
+            ).fetchall()
 
         except sqlite3.Error as exc:
             raise HTTPException(
@@ -96,9 +124,20 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
             - float(row["outstanding"])
         )
 
-        minimum = float(row["min_transaction"])
+        minimum = float(
+            row["min_transaction"] or 0
+        )
 
-        if purchase.amount < minimum:
+        if (
+            not math.isfinite(available)
+            or not math.isfinite(minimum)
+        ):
+            continue
+
+        if (
+            purchase.amount < minimum
+            or available < purchase.amount
+        ):
             continue
 
         eligible_merchant = row["eligible_merchant"]
@@ -116,19 +155,27 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
         rate = float(row["reward_percent"])
         cap = row["max_cashback"]
 
-        if available < purchase.amount:
+        if (
+            not math.isfinite(rate)
+            or not (0 <= rate <= 100)
+        ):
             continue
 
-        if not (0 <= rate <= 100):
-            continue
+        if cap is not None:
+            cap = float(cap)
 
-        if cap is not None and float(cap) < 0:
-            continue
+            if (
+                not math.isfinite(cap)
+                or cap < 0
+            ):
+                continue
 
-        raw_reward = purchase.amount * rate / 100
+        raw_reward = (
+            purchase.amount * rate / 100
+        )
 
         estimate = (
-            min(raw_reward, float(cap))
+            min(raw_reward, cap)
             if cap is not None
             else raw_reward
         )
@@ -171,10 +218,13 @@ def recommend_card_v2(purchase: PurchaseRequestV2):
 
 
 @router.get("/reward-catalog")
-def reward_catalog_v2():
+def reward_catalog_v2(
+    current_user=Depends(get_current_user)
+):
     with get_connection() as conn:
         try:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT
                     bank_name,
                     card_name,
@@ -184,8 +234,12 @@ def reward_catalog_v2():
                     min_transaction,
                     eligible_merchant
                 FROM reward_catalog
-                ORDER BY bank_name, card_name, category
-            """).fetchall()
+                ORDER BY
+                    bank_name,
+                    card_name,
+                    category
+                """
+            ).fetchall()
 
         except sqlite3.Error as exc:
             raise HTTPException(
@@ -195,6 +249,8 @@ def reward_catalog_v2():
 
     return {
         "total_rewards": len(rows),
-        "rewards": [dict(row) for row in rows],
+        "rewards": [
+            dict(row) for row in rows
+        ],
         "policy_status": "demo/unverified"
     }

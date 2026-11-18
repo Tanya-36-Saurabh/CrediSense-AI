@@ -2,165 +2,307 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CrediSense AI Dashboard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrediSense AI 2.0</title>
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+<style>
+* {
+    box-sizing: border-box;
+}
 
-        body {
-            font-family: Arial, sans-serif;
-            background: #101827;
-            color: white;
-            margin: 0;
-            padding: 30px;
-        }
+[hidden] {
+    display: none !important;
+}
 
-        h1 {
-            color: #a78bfa;
-        }
+body {
+    margin: 0;
+    padding: 25px;
+    font-family: Arial, sans-serif;
+    background: #101827;
+    color: white;
+}
 
-        h2 {
-            margin-top: 35px;
-        }
+h1 {
+    color: #a78bfa;
+}
 
-        .container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-        }
+h2 {
+    margin-top: 25px;
+}
 
-        .card {
-            background: #202d43;
-            padding: 25px;
-            border-radius: 12px;
-        }
+.container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 18px;
+}
 
-        .value {
-            font-size: 28px;
-            font-weight: bold;
-        }
+.card, .credit-card {
+    background: #202d43;
+    padding: 22px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+}
 
-        .credit-card {
-            background: #202d43;
-            padding: 22px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-        }
+.value {
+    font-size: 27px;
+    font-weight: bold;
+}
 
-        .credit-card h3 {
-            color: #c4b5fd;
-        }
+input, select {
+    padding: 11px;
+    margin: 6px 0 14px;
+    width: 100%;
+    background: #334155;
+    border: 1px solid #64748b;
+    border-radius: 7px;
+    color: white;
+}
 
-        .details {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            margin: 12px 0;
-        }
+button {
+    padding: 11px 16px;
+    border: none;
+    border-radius: 7px;
+    background: #8b5cf6;
+    color: white;
+    cursor: pointer;
+    margin: 5px 5px 5px 0;
+}
 
-        .progress {
-            width: 100%;
-            height: 12px;
-            background: #39465e;
-            border-radius: 10px;
-            overflow: hidden;
-        }
+button:hover {
+    opacity: 0.9;
+}
 
-        .progress-fill {
-            height: 100%;
-            background: #a78bfa;
-            border-radius: 10px;
-        }
-    </style>
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.danger {
+    background: #dc2626;
+}
+
+.secondary {
+    background: #475569;
+}
+
+.error {
+    color: #fca5a5;
+}
+
+.success {
+    color: #86efac;
+}
+
+#authScreen {
+    max-width: 450px;
+    margin: 60px auto;
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.auth-tabs button {
+    flex: 1;
+}
+
+.auth-submit {
+    width: 100%;
+    font-size: 16px;
+}
+
+.details {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin: 12px 0;
+}
+
+.progress {
+    height: 12px;
+    background: #39465e;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #a78bfa;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #39465e;
+    text-align: left;
+}
+
+.chart-bar {
+    background: #39465e;
+    height: 17px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 18px;
+}
+
+.chart-fill {
+    background: #a78bfa;
+    height: 100%;
+}
+
+small {
+    color: #cbd5e1;
+}
+
+</style>
 </head>
-
-
-
-<section class="card" style="margin-top:30px;">
-    <h2>Add Credit Card</h2>
-
-    <form id="addCardForm">
-        <p>Bank Name</p>
-        <input id="bankName" required placeholder="HDFC">
-
-        <p>Card Name</p>
-        <input id="cardName" required placeholder="Millennia">
-
-        <p>Credit Limit</p>
-        <input id="creditLimit" type="number" min="1" step="0.01" required>
-
-        <p>Outstanding Amount</p>
-        <input id="outstandingAmount" type="number" min="0"
-               step="0.01" value="0" required>
-
-        <br><br>
-        <button type="submit">+ Add Credit Card</button>
-    </form>
-
-    <p id="formMessage"></p>
-</section>
-
-<script>
-    document.getElementById("addCardForm").addEventListener(
-        "submit",
-        async function(event) {
-            event.preventDefault();
-
-            const message = document.getElementById("formMessage");
-
-            const card = {
-                bank_name: document.getElementById("bankName").value,
-                card_name: document.getElementById("cardName").value,
-                credit_limit: Number(
-                    document.getElementById("creditLimit").value
-                ),
-                outstanding: Number(
-                    document.getElementById("outstandingAmount").value
-                )
-            };
-
-            if (card.outstanding > card.credit_limit) {
-                message.textContent = "Outstanding cannot exceed limit.";
-                return;
-            }
-
-            try {
-                const response = await fetch("/dashboard/add-card", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(card)
-                });
-
-                if (!response.ok) {
-                    throw new Error("Unable to add card");
-                }
-
-                message.textContent = "Credit Card Added Successfully!";
-                document.getElementById("addCardForm").reset();
-
-                loadDashboard();
-
-            } catch (error) {
-                message.textContent = "Failed to add credit card.";
-            }
-        }
-    );
-</script>
-
-
 
 <body>
 
-    <h1>CrediSense AI</h1>
-    <h2>Credit Card Dashboard</h2>
+<!-- AUTHENTICATION SCREEN -->
 
-    <div class="container">
+<section id="authScreen" class="card">
+
+    <h1>CrediSense AI 2.0</h1>
+
+    <p>Secure Credit Card Management</p>
+
+    <div class="auth-tabs">
+        <button type="button" id="loginTab">
+            Login
+        </button>
+
+        <button type="button" id="signupTab" class="secondary">
+            Create Account
+        </button>
+    </div>
+
+
+    <!-- LOGIN FORM -->
+
+    <form id="loginForm">
+
+        <h2>Welcome Back</h2>
+
+        <label for="loginEmail">Email Address</label>
+
+        <input id="loginEmail"
+               type="email"
+               maxlength="254"
+               placeholder="Enter your email"
+               autocomplete="username"
+               required>
+
+        <label for="loginPassword">Password</label>
+
+        <input id="loginPassword"
+               type="password"
+               maxlength="128"
+               placeholder="Enter your password"
+               autocomplete="current-password"
+               required>
+
+        <button class="auth-submit" type="submit">
+            Login
+        </button>
+
+        <p>
+            New user?
+            <button type="button" id="showSignup" class="secondary">
+                Create Account
+            </button>
+        </p>
+
+    </form>
+
+
+    <!-- SIGNUP FORM -->
+
+    <form id="signupForm" hidden>
+
+        <h2>Create Your Account</h2>
+
+        <label for="signupEmail">Email Address</label>
+
+        <input id="signupEmail"
+               type="email"
+               maxlength="254"
+               placeholder="Enter your email"
+               autocomplete="username"
+               required>
+
+        <label for="signupPassword">Password</label>
+
+        <input id="signupPassword"
+               type="password"
+               minlength="12"
+               maxlength="128"
+               placeholder="Minimum 12 characters"
+               autocomplete="new-password"
+               required>
+
+        <label for="confirmPassword">Confirm Password</label>
+
+        <input id="confirmPassword"
+               type="password"
+               minlength="12"
+               maxlength="128"
+               placeholder="Re-enter password"
+               autocomplete="new-password"
+               required>
+
+        <button class="auth-submit" type="submit">
+            Create Account
+        </button>
+
+        <p>
+            Already registered?
+            <button type="button" id="showLogin" class="secondary">
+                Login
+            </button>
+        </p>
+
+    </form>
+
+    <p id="authMessage" role="status"></p>
+
+    <small>
+        Never enter your actual credit card number, CVV or PIN.
+    </small>
+
+</section>
+
+
+<!-- MAIN DASHBOARD -->
+
+<main id="dashboard" hidden>
+
+    <header class="card">
+
+        <h1>CrediSense AI 2.0</h1>
+
+        <p>Credit Card & Financial Analytics Dashboard</p>
+
+        <p id="userEmail"></p>
+
+        <button id="logoutButton" class="danger">
+            Logout
+        </button>
+
+    </header>
+
+
+    <!-- CARD SUMMARY -->
+
+    <section class="container">
+
         <div class="card">
             <h3>Total Cards</h3>
             <p class="value" id="totalCards">0</p>
@@ -185,1360 +327,1987 @@
             <h3>Credit Utilization</h3>
             <p class="value" id="utilization">0%</p>
         </div>
-    </div>
 
-    <h2>My Credit Cards</h2>
-
-    <div id="cardList">
-
-        <p>Loading cards...</p>
-    </div>
-
-    
-<section class="card" style="margin-top: 30px;">
-    <h2>Transaction History</h2>
-
-    <div style="overflow-x: auto;">
-        <table style="width:100%; text-align:left; border-spacing:0 12px;">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Card</th>
-                    <th>Merchant</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="transactionList">
-                <tr>
-                    <td colspan="5">Loading transactions...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</section>
+    </section>
 
 
-    <script>
-        function money(amount) {
-            return "₹" + Number(amount).toLocaleString("en-IN");
+    <!-- ADD CARD -->
+
+    <section class="card">
+
+        <h2>Add Credit Card</h2>
+
+        <form id="addCardForm">
+
+            <label>Bank Name</label>
+            <input id="bankName" required placeholder="HDFC">
+
+            <label>Card Name</label>
+            <input id="cardName" required placeholder="Millennia">
+
+            <label>Credit Limit</label>
+
+            <input id="creditLimit"
+                   type="number"
+                   min="0.01"
+                   step="0.01"
+                   required>
+
+            <label>Outstanding Amount</label>
+
+            <input id="outstandingAmount"
+                   type="number"
+                   min="0"
+                   step="0.01"
+                   value="0"
+                   required>
+
+            <button type="submit">
+                Add Card
+            </button>
+
+        </form>
+
+        <p id="formMessage"></p>
+
+    </section>
+
+
+    <!-- MY CARDS -->
+
+    <section class="card">
+
+        <h2>My Credit Cards</h2>
+
+        <div id="cardList"></div>
+
+    </section>
+
+
+    <!-- ADD TRANSACTION -->
+
+    <section class="card">
+
+        <h2>Add Transaction</h2>
+
+        <form id="transactionForm">
+
+            <label>Credit Card</label>
+
+            <select id="transactionCard" required>
+                <option value="">Select Credit Card</option>
+            </select>
+
+            <label>Merchant</label>
+
+            <input id="merchant" required placeholder="Amazon">
+
+            <label>Category</label>
+
+            <select id="category">
+                <option>Shopping</option>
+                <option>Food</option>
+                <option>Travel</option>
+                <option>Bills</option>
+                <option>Others</option>
+            </select>
+
+            <label>Amount</label>
+
+            <input id="transactionAmount"
+                   type="number"
+                   min="0.01"
+                   step="0.01"
+                   required>
+
+            <label>Transaction Date</label>
+
+            <input id="transactionDate"
+                   type="date"
+                   required>
+
+            <button type="submit">
+                Add Transaction
+            </button>
+
+        </form>
+
+        <p id="transactionMessage"></p>
+
+    </section>
+
+
+    <!-- TRANSACTION HISTORY -->
+
+    <section class="card">
+
+        <h2>Transaction History</h2>
+
+        <div style="overflow-x:auto">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Card</th>
+                        <th>Merchant</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="transactionList"></tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- SPENDING ANALYTICS -->
+
+    <section class="card">
+
+        <h2>Spending Analytics</h2>
+
+        <h3 id="totalSpending">Total Spending: ₹0</h3>
+
+        <p id="transactionCount">Total Transactions: 0</p>
+
+        <div id="spendingChart"></div>
+
+    </section>
+
+    <section class="card">
+
+        <h2>Monthly Spending Analytics</h2>
+
+        <div id="monthlyChart"></div>
+
+    </section>
+
+
+    <!-- REWARD RECOMMENDATION -->
+
+    <section class="card">
+
+        <h2>AI Credit Card Recommendation</h2>
+
+        <form id="recommendForm">
+
+            <label>Purchase Category</label>
+
+            <select id="recommendCategory">
+                <option>Shopping</option>
+                <option>Food</option>
+                <option>Travel</option>
+                <option>Bills</option>
+                <option>Others</option>
+            </select>
+
+            <label>Purchase Amount</label>
+
+            <input id="recommendAmount"
+                   type="number"
+                   min="0.01"
+                   step="0.01"
+                   required>
+
+            <label>Merchant (Optional)</label>
+
+            <input id="recommendMerchant"
+                   placeholder="Amazon">
+
+            <button type="submit">
+                Find Best Card
+            </button>
+
+        </form>
+
+        <div id="recommendResult"></div>
+
+        <small>
+            Reward estimates use unverified demo policies.
+        </small>
+
+    </section>
+
+
+    <!-- REWARD CATALOG -->
+
+    <section class="card">
+
+        <h2>Credit Card Rewards Catalog</h2>
+
+        <div style="overflow-x:auto">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Bank</th>
+                        <th>Card</th>
+                        <th>Category</th>
+                        <th>Reward Rate</th>
+                    </tr>
+                </thead>
+
+                <tbody id="rewardCatalogList"></tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- ML PREDICTION -->
+
+    <section class="card">
+
+        <h2>AI Spending Prediction</h2>
+
+        <h2 id="mlPredictionAmount">Loading...</h2>
+
+        <p id="mlPredictionStatus"></p>
+
+        <small>
+            Synthetic-data demonstration.
+            Not a real financial forecast.
+        </small>
+
+    </section>
+
+
+    <!-- CLUSTERING -->
+
+    <section class="card">
+
+        <h2>AI Spending Pattern Analysis</h2>
+
+        <label>Monthly Spending</label>
+
+        <input id="clusterAmount"
+               type="number"
+               min="0"
+               value="20000">
+
+        <button id="clusterButton">
+            Analyse Spending
+        </button>
+
+        <h3 id="clusterResult"></h3>
+
+        <small>
+            Demo K-Means model trained on synthetic data.
+        </small>
+
+    </section>
+
+
+    <!-- ANOMALY DETECTION -->
+
+    <section class="card">
+
+        <h2>AI Transaction Anomaly Detection</h2>
+
+        <label>Transaction Amount</label>
+
+        <input id="anomalyAmount"
+               type="number"
+               min="0.01">
+
+        <button id="anomalyButton">
+            Detect Anomaly
+        </button>
+
+        <p id="anomalyResult"></p>
+
+        <small>
+            Demo model. Unusual does not necessarily mean fraud.
+        </small>
+
+    </section>
+
+
+    <!-- FINANCIAL INSIGHTS -->
+
+    <section class="card">
+
+        <h2>AI Financial Insights</h2>
+
+        <label>Current Month Spending</label>
+
+        <input id="currentMonthSpending"
+               type="number"
+               min="0">
+
+        <label>Previous Month Spending</label>
+
+        <input id="previousMonthSpending"
+               type="number"
+               min="0">
+
+        <button id="insightsButton">
+            Generate Insights
+        </button>
+
+        <p id="financialInsightsResult"></p>
+
+        <small>
+            Rule-based analysis, not personalised financial advice.
+        </small>
+
+    </section>
+
+
+    <!-- BILLS -->
+
+    <section class="card">
+
+        <h2>Credit Card Bill Management</h2>
+
+        <button id="refreshBills">
+            Refresh Bills
+        </button>
+
+        <div id="billsList"></div>
+
+    </section>
+
+</main>
+
+
+<script>
+
+"use strict";
+
+let accessToken = null;
+let authBusy = false;
+let expiryTimer = null;
+
+const $ = id => document.getElementById(id);
+
+
+function money(value) {
+
+    return Number(value).toLocaleString("en-IN", {
+        style: "currency",
+        currency: "INR"
+    });
+
+}
+
+
+function today() {
+
+    const d = new Date();
+
+    return [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, "0"),
+        String(d.getDate()).padStart(2, "0")
+    ].join("-");
+
+}
+
+
+function setMessage(id, text, success = false) {
+
+    const element = $(id);
+
+    element.textContent = text;
+    element.className = success ? "success" : "error";
+
+}
+
+
+function switchAuth(mode) {
+
+    if (authBusy) return;
+
+    const signup = mode === "signup";
+
+    $("loginForm").hidden = signup;
+    $("signupForm").hidden = !signup;
+
+    $("loginTab").className = signup ? "secondary" : "";
+    $("signupTab").className = signup ? "" : "secondary";
+
+    $("loginPassword").value = "";
+    $("signupPassword").value = "";
+    $("confirmPassword").value = "";
+
+    setMessage("authMessage", "");
+
+}
+
+
+$("signupTab").onclick = () => switchAuth("signup");
+$("showSignup").onclick = () => switchAuth("signup");
+
+$("loginTab").onclick = () => switchAuth("login");
+$("showLogin").onclick = () => switchAuth("login");
+
+
+function setAuthBusy(busy) {
+
+    authBusy = busy;
+
+    $("authScreen")
+        .querySelectorAll("button")
+        .forEach(button => {
+            button.disabled = busy;
+        });
+
+}
+
+
+async function readResponse(response) {
+
+    let data;
+
+    try {
+        data = await response.json();
+    } catch (_) {
+        throw new Error("Invalid server response.");
+    }
+
+    if (!response.ok) {
+
+        let message = "Request failed.";
+
+        if (typeof data.detail === "string") {
+            message = data.detail;
+        } else if (response.status === 422) {
+            message = "Please enter valid details.";
+        } else if (response.status === 429) {
+            message = "Too many requests. Please try again later.";
         }
 
-        async function loadDashboard() {
-            const cardList = document.getElementById("cardList");
+        throw new Error(message);
 
-            try {
-                const response = await fetch("/card-summary");
+    }
 
-                if (!response.ok) {
-                    throw new Error("Failed to load dashboard");
-                }
+    return data;
 
-                const data = await response.json();
-
-                document.getElementById("totalCards").textContent =
-                    data.total_cards;
-
-                document.getElementById("totalLimit").textContent =
-                    money(data.total_credit_limit);
-
-                document.getElementById("outstanding").textContent =
-                    money(data.total_outstanding);
-
-                document.getElementById("available").textContent =
-                    money(data.total_available_limit);
-
-                document.getElementById("utilization").textContent =
-                    data.overall_utilization_percent + "%";
-
-                cardList.innerHTML = "";
-
-                if (data.cards.length === 0) {
-                    cardList.textContent = "No cards added yet.";
-                    return;
-                }
-
-                data.cards.forEach(card => {
-                    const box = document.createElement("div");
-                    box.className = "credit-card";
-
-                    const heading = document.createElement("h3");
-                    heading.textContent =
-                        card.bank_name + " - " + card.card_name;
-
-                    box.appendChild(heading);
-
-                    const fields = [
-                        ["Credit Limit", money(card.credit_limit)],
-                        ["Outstanding", money(card.outstanding)],
-                        ["Available Limit", money(card.available_limit)],
-                        ["Utilization", card.utilization_percent + "%"]
-                    ];
-
-                    fields.forEach(([label, value]) => {
-                        const row = document.createElement("div");
-                        row.className = "details";
-
-                        const left = document.createElement("span");
-                        left.textContent = label;
-
-                        const right = document.createElement("strong");
-                        right.textContent = value;
-
-                        row.append(left, right);
-                        box.appendChild(row);
-                    });
-
-                    const progress = document.createElement("div");
-                    progress.className = "progress";
-
-                    const fill = document.createElement("div");
-                    fill.className = "progress-fill";
-
-                    fill.style.width =
-                        Math.min(100, Math.max(0, card.utilization_percent)) + "%";
-
-                    progress.appendChild(fill);
-                    box.appendChild(progress);
-
-                    const deleteButton = document.createElement("button");
-                    deleteButton.textContent = "Delete Card";
+}
 
 
-                    deleteButton.style.marginTop = "15px";
-                    deleteButton.style.padding = "10px 15px";
-                    deleteButton.style.background = "#ef4444";
-                    deleteButton.style.color = "white";
-                    deleteButton.style.border = "none";
-                    deleteButton.style.borderRadius = "8px";
-                    deleteButton.style.cursor = "pointer";
- 
-                    deleteButton.onclick = async function() {
-                        const confirmed = confirm(
-                            "Are you sure you want to delete this card?"
-                        );
+// SIGNUP
 
-                        if (!confirmed) {
-                            return;
-                        }
+$("signupForm").addEventListener("submit", async event => {
 
-                        try {
-                            const response = await fetch("/cards/" + card.id, {
-                                method: "DELETE"
-                            });
+    event.preventDefault();
 
-                            if (!response.ok) {
-                                throw new Error("Delete failed");
-                            }
+    if (authBusy) return;
 
-                            alert("Card deleted successfully!");
-                            loadDashboard(); 
+    const email = $("signupEmail").value.trim();
 
-                        } catch (error) {
-                        
-                            alert("Unable to delete card.");
-                        }
+    const password = $("signupPassword").value;
+
+    const confirmPassword = $("confirmPassword").value;
+
+    if (password.length < 12 || password.length > 128) {
+
+        setMessage(
+            "authMessage",
+            "Password must contain 12 to 128 characters."
+        );
+
+        return;
+
+    }
+
+    if (password !== confirmPassword) {
+
+        setMessage(
+            "authMessage",
+            "Passwords do not match."
+        );
+
+        return;
+
+    }
+
+    setAuthBusy(true);
+
+    setMessage("authMessage", "Creating account...", true);
+
+    try {
+
+        const response = await fetch("/api/auth/signup", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                email: email,
+                password: password
+            }),
+
+            cache: "no-store"
+
+        });
+
+        await readResponse(response);
+
+        $("signupForm").reset();
+
+        setAuthBusy(false);
+
+        switchAuth("login");
+
+        $("loginEmail").value = email;
+
+        setMessage(
+            "authMessage",
+            "Account created successfully! Please login.",
+            true
+        );
+
+    } catch (error) {
+
+        setMessage("authMessage", error.message);
+
+    } finally {
+
+        $("signupPassword").value = "";
+        $("confirmPassword").value = "";
+
+        setAuthBusy(false);
+
+    }
+
+});
 
 
-  
-                    };
+// LOGIN
 
-const editButton = document.createElement("button");
+$("loginForm").addEventListener("submit", async event => {
 
-editButton.textContent = "Edit Card";
-editButton.style.marginTop = "15px";
-editButton.style.marginRight = "10px";
-editButton.style.padding = "10px 15px";
-editButton.style.background = "#8b5cf6";
-editButton.style.color = "white";
-editButton.style.border = "none";
-editButton.style.borderRadius = "8px";
-editButton.style.cursor = "pointer";
+    event.preventDefault();
 
-editButton.onclick = async function() {
-    const bankName = prompt("Bank Name:", card.bank_name);
-    if (bankName === null) return;
+    if (authBusy) return;
 
-    const cardName = prompt("Card Name:", card.card_name);
-    if (cardName === null) return;
+    const email = $("loginEmail").value.trim();
 
-    const limitInput = prompt("Credit Limit:", card.credit_limit);
-    if (limitInput === null) return;
+    const password = $("loginPassword").value;
 
-    const outstandingInput = prompt(
-        "Outstanding Amount:",
-        card.outstanding
+    setAuthBusy(true);
+
+    setMessage("authMessage", "Logging in...", true);
+
+    try {
+
+        const response = await fetch("/api/auth/login", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                email: email,
+                password: password
+            }),
+
+            cache: "no-store"
+
+        });
+
+        const result = await readResponse(response);
+
+        if (!result.access_token) {
+            throw new Error("Login token missing.");
+        }
+
+        accessToken = result.access_token;
+
+        const profile = await apiFetch("/api/auth/me");
+
+        $("userEmail").textContent =
+            "Logged in: " + profile.email;
+
+        $("loginPassword").value = "";
+
+        $("authScreen").hidden = true;
+        $("dashboard").hidden = false;
+
+        expiryTimer = setTimeout(
+            () => logout(true),
+            (Number(result.expires_in) || 1800) * 1000
+        );
+
+        await loadAll();
+
+    } catch (error) {
+
+        accessToken = null;
+
+        $("dashboard").hidden = true;
+        $("authScreen").hidden = false;
+
+        setMessage("authMessage", error.message);
+
+    } finally {
+
+        $("loginPassword").value = "";
+
+        setAuthBusy(false);
+
+    }
+
+});
+
+
+// LOGOUT
+
+function logout(expired = false) {
+
+    accessToken = null;
+
+    clearTimeout(expiryTimer);
+
+    $("dashboard").hidden = true;
+
+    if (expired) {
+        alert("Session expired. Please login again.");
+    }
+
+    window.location.replace(
+        window.location.pathname
     );
-    if (outstandingInput === null) return;
 
-    const creditLimit = Number(limitInput);
-    const outstanding = Number(outstandingInput);
+}
+
+
+$("logoutButton").onclick = () => logout();
+
+
+// AUTHENTICATED API REQUESTS
+
+async function apiFetch(path, options = {}) {
+
+    if (!accessToken) {
+        throw new Error("Please login first.");
+    }
+
+    if (!path.startsWith("/") || path.startsWith("//")) {
+        throw new Error("Invalid API path.");
+    }
+
+    const requestToken = accessToken;
+
+    const headers = new Headers(options.headers || {});
+
+    headers.set(
+        "Authorization",
+        "Bearer " + requestToken
+    );
+
+    if (options.body) {
+
+        headers.set(
+            "Content-Type",
+            "application/json"
+        );
+
+    }
+
+    const response = await fetch(path, {
+
+        ...options,
+
+        headers,
+
+        cache: "no-store",
+
+        redirect: "error"
+
+    });
+
+    if (requestToken !== accessToken) {
+        throw new Error("Session ended.");
+    }
+
+    if (response.status === 401) {
+
+        logout(true);
+
+        throw new Error("Session expired.");
+
+    }
+
+    const data = await readResponse(response);
+
+    if (requestToken !== accessToken) {
+        throw new Error("Session ended.");
+    }
+
+    return data;
+
+}
+
+
+// LOAD DASHBOARD DATA
+
+async function loadAll() {
+
+    if (!accessToken) return;
+
+    await Promise.allSettled([
+
+        loadDashboard(),
+        loadTransactions(),
+        loadSpendingAnalytics(),
+        loadMonthlySpending(),
+        loadRewardCatalog(),
+        loadMLPrediction(),
+        loadBills()
+
+    ]);
+
+}
+
+
+// CARD SUMMARY
+
+async function loadDashboard() {
+
+    try {
+
+        const data = await apiFetch("/card-summary");
+
+        $("totalCards").textContent =
+            data.total_cards;
+
+        $("totalLimit").textContent =
+            money(data.total_credit_limit);
+
+        $("outstanding").textContent =
+            money(data.total_outstanding);
+
+        $("available").textContent =
+            money(data.total_available_limit);
+
+        $("utilization").textContent =
+            data.overall_utilization_percent + "%";
+
+        const list = $("cardList");
+
+        list.replaceChildren();
+
+        if (!data.cards.length) {
+            list.textContent = "No cards added yet.";
+        }
+
+        for (const card of data.cards) {
+
+            const box = document.createElement("div");
+
+            box.className = "credit-card";
+
+            const heading = document.createElement("h3");
+
+            heading.textContent =
+                card.bank_name + " - " + card.card_name;
+
+            box.appendChild(heading);
+
+            const fields = [
+
+                ["Credit Limit", money(card.credit_limit)],
+
+                ["Outstanding", money(card.outstanding)],
+
+                ["Available", money(card.available_limit)],
+
+                ["Utilization", card.utilization_percent + "%"]
+
+            ];
+
+            for (const [label, value] of fields) {
+
+                const row = document.createElement("div");
+
+                row.className = "details";
+
+                const left = document.createElement("span");
+
+                left.textContent = label;
+
+                const right = document.createElement("strong");
+
+                right.textContent = value;
+
+                row.append(left, right);
+
+                box.appendChild(row);
+
+            }
+
+            const progress = document.createElement("div");
+
+            progress.className = "progress";
+
+            const fill = document.createElement("div");
+
+            fill.className = "progress-fill";
+
+            fill.style.width = Math.min(
+                100,
+                Math.max(0, card.utilization_percent)
+            ) + "%";
+
+            progress.appendChild(fill);
+
+            box.appendChild(progress);
+
+            const edit = document.createElement("button");
+
+            edit.textContent = "Edit Card";
+
+            edit.onclick = () => editCard(card);
+
+            const remove = document.createElement("button");
+
+            remove.textContent = "Delete Card";
+
+            remove.className = "danger";
+
+            remove.onclick = () => deleteCard(card.id);
+
+            box.append(edit, remove);
+
+            list.appendChild(box);
+
+        }
+
+        loadCardOptions(data.cards);
+
+    } catch (error) {
+
+        $("cardList").textContent = error.message;
+
+    }
+
+}
+
+
+function loadCardOptions(cards) {
+
+    const select = $("transactionCard");
+
+    const previousValue = select.value;
+
+    select.replaceChildren();
+
+    const placeholder = document.createElement("option");
+
+    placeholder.value = "";
+
+    placeholder.textContent = "Select Credit Card";
+
+    select.appendChild(placeholder);
+
+    for (const card of cards) {
+
+        const option = document.createElement("option");
+
+        option.value = card.id;
+
+        option.textContent =
+            card.bank_name + " - " + card.card_name;
+
+        select.appendChild(option);
+
+    }
+
+    if (cards.some(card => String(card.id) === previousValue)) {
+        select.value = previousValue;
+    }
+
+}
+
+
+// ADD CARD
+
+$("addCardForm").addEventListener("submit", async event => {
+
+    event.preventDefault();
+
+    const card = {
+
+        bank_name: $("bankName").value.trim(),
+
+        card_name: $("cardName").value.trim(),
+
+        credit_limit: Number($("creditLimit").value),
+
+        outstanding: Number($("outstandingAmount").value)
+
+    };
 
     if (
-        !bankName.trim() ||
-        !cardName.trim() ||
-        !limitInput.trim() ||
-        !outstandingInput.trim() ||
+
+        !card.bank_name ||
+        !card.card_name ||
+        !Number.isFinite(card.credit_limit) ||
+        card.credit_limit <= 0 ||
+        !Number.isFinite(card.outstanding) ||
+        card.outstanding < 0 ||
+        card.outstanding > card.credit_limit
+
+    ) {
+
+        setMessage("formMessage", "Invalid card details.");
+
+        return;
+
+    }
+
+    const button = event.submitter;
+
+    button.disabled = true;
+
+    try {
+
+        await apiFetch("/cards", {
+
+            method: "POST",
+
+            body: JSON.stringify(card)
+
+        });
+
+        $("addCardForm").reset();
+
+        $("outstandingAmount").value = 0;
+
+        setMessage(
+            "formMessage",
+            "Card added successfully!",
+            true
+        );
+
+        await loadDashboard();
+
+    } catch (error) {
+
+        setMessage("formMessage", error.message);
+
+    } finally {
+
+        button.disabled = false;
+
+    }
+
+});
+
+
+// EDIT CARD
+
+async function editCard(card) {
+
+    const bank = prompt("Bank Name:", card.bank_name);
+    if (bank === null) return;
+
+    const name = prompt("Card Name:", card.card_name);
+    if (name === null) return;
+
+    const limitText = prompt("Credit Limit:", card.credit_limit);
+    if (limitText === null) return;
+
+    const outstandingText = prompt(
+        "Outstanding:",
+        card.outstanding
+    );
+
+    if (outstandingText === null) return;
+
+    const creditLimit = Number(limitText);
+
+    const outstanding = Number(outstandingText);
+
+    if (
+
+        !bank.trim() ||
+        !name.trim() ||
+        !limitText.trim() ||
+        !outstandingText.trim() ||
         !Number.isFinite(creditLimit) ||
         creditLimit <= 0 ||
         !Number.isFinite(outstanding) ||
         outstanding < 0 ||
         outstanding > creditLimit
+
     ) {
-        alert("Please enter valid card details.");
+
+        alert("Invalid card details.");
+
         return;
+
     }
 
     try {
-        const response = await fetch("/cards/" + card.id, {
+
+        await apiFetch("/cards/" + card.id, {
+
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
+
             body: JSON.stringify({
-                bank_name: bankName.trim(),
-                card_name: cardName.trim(),
+
+                bank_name: bank.trim(),
+
+                card_name: name.trim(),
+
                 credit_limit: creditLimit,
+
                 outstanding: outstanding
+
             })
+
         });
 
-        if (!response.ok) {
-            throw new Error("Update failed");
-        }
+        await loadAll();
 
         alert("Card updated successfully!");
-        loadDashboard();
 
     } catch (error) {
-        alert("Unable to update card.");
+
+        alert(error.message);
+
     }
-};
 
-box.appendChild(editButton);
+}
 
-editButton.textContent = "Edit Card";
-editButton.style.marginTop = "15px";
-editButton.style.marginRight = "10px";
-editButton.style.padding = "10px 15px";
-editButton.style.background = "#8b5cf6";
-editButton.style.color = "white";
-editButton.style.border = "none";
-editButton.style.borderRadius = "8px";
-editButton.style.cursor = "pointer";
 
-editButton.onclick = async function() {
-    const bankName = prompt("Bank Name:", card.bank_name);
-    if (bankName === null) return;
+// DELETE CARD
 
-    const cardName = prompt("Card Name:", card.card_name);
-    if (cardName === null) return;
+async function deleteCard(cardId) {
 
-    const limitInput = prompt("Credit Limit:", card.credit_limit);
-    if (limitInput === null) return;
-
-    const outstandingInput = prompt(
-        "Outstanding Amount:",
-        card.outstanding
-    );
-    if (outstandingInput === null) return;
-
-    const creditLimit = Number(limitInput);
-    const outstanding = Number(outstandingInput);
-
-    if (
-        !bankName.trim() ||
-        !cardName.trim() ||
-        !limitInput.trim() ||
-        !outstandingInput.trim() ||
-        !Number.isFinite(creditLimit) ||
-        creditLimit <= 0 ||
-        !Number.isFinite(outstanding) ||
-        outstanding <= 0 ||
-        outstanding > creditLimit
-    ) {
-        alert("Please enter valid card details.");
-        return;
-    }
+    if (!confirm("Delete this card?")) return;
 
     try {
-        const response = await fetch("/cards/" + card.id, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                bank_name: bankName.trim(),
-                card_name: cardName.trim(),
-                credit_limit: creditLimit,
-                outstanding: outstanding
-            })
+
+        await apiFetch("/cards/" + cardId, {
+
+            method: "DELETE"
+
         });
 
-        if (!response.ok) {
-            throw new Error("Update failed");
-        }
+        await loadAll();
 
-        alert("Card updated successfully!");
-        loadDashboard();
+        alert("Card deleted successfully!");
 
     } catch (error) {
-        alert("Unable to update card.");
+
+        alert(error.message);
+
     }
-};
 
-box.appendChild(editButton);
+}
 
-box.appendChild(deleteButton);
-cardList.appendChild(box);
-                
 
-           
-                });
-            } catch (error) {
-                cardList.textContent = "Error loading cards.";
-            }
-        }
+// TRANSACTION HISTORY
 
-        loadDashboard();
-    </script>
-    
-<script>
 async function loadTransactions() {
-    const table = document.getElementById("transactionList");
+
+    const table = $("transactionList");
 
     try {
-        const response = await fetch("/transactions");
 
-        if (!response.ok) {
-            throw new Error("Failed to fetch transactions");
-        }
+        const data = await apiFetch("/transactions");
 
-        const data = await response.json();
-        table.innerHTML = "";
+        table.replaceChildren();
 
-        if (data.transactions.length === 0) {
-            const row = table.insertRow();
-            const cell = row.insertCell();
-            cell.colSpan = 5;
+        if (!data.transactions.length) {
+
+            const cell = table.insertRow().insertCell();
+
+            cell.colSpan = 6;
+
             cell.textContent = "No transactions found.";
+
             return;
+
         }
 
-        data.transactions.forEach(transaction => {
+        for (const transaction of data.transactions) {
+
             const row = table.insertRow();
 
             const values = [
+
                 transaction.transaction_date,
-                transaction.bank_name + " - " + transaction.card_name,
+
+                transaction.bank_name + " - " +
+                transaction.card_name,
+
                 transaction.merchant,
+
                 transaction.category,
-                "₹" + Number(transaction.amount).toLocaleString("en-IN")
+
+                money(transaction.amount)
+
             ];
 
             values.forEach(value => {
-                const cell = row.insertCell();
-                cell.textContent = value;
-                cell.style.padding = "12px";
-                cell.style.borderBottom = "1px solid #39465e";
+
+                row.insertCell().textContent = value;
+
             });
-             
-            const deleteCell = row.insertCell();
-            const deleteButton = document.createElement("button");
-            deleteButton.textContent = "Delete";
-            deleteButton.style.background = "#ef4444";
-            deleteButton.style.color = "white";
-            deleteButton.style.border = "none";
-            deleteButton.style.borderRadius = "6px";
-            deleteButton.style.padding = "6px 10px";
-            deleteButton.style.cursor = "pointer";
 
-            deleteButton.onclick = async function() {
-                const confirmed = confirm(
-                    "Are you sure you want to delete this transaction?"
-                );
+            const actions = row.insertCell();
 
-                if (!confirmed) {
-                    return;
-                }
+            const edit = document.createElement("button");
 
-                try {
-                    const response = await fetch(
-                        "/transactions/" + transaction.id,
-                        {
-                            method: "DELETE"
-                        }
-                    );
+            edit.textContent = "Edit";
 
-                    if (!response.ok) {
-                        throw new Error("Delete failed");
-                    }
+            edit.onclick = () => editTransaction(transaction);
 
-                    alert("Transaction deleted successfully!");
-                    loadTransactions();
+            const remove = document.createElement("button");
 
-                } catch (error) {
-                    alert("Unable to delete transaction.");
-                }
-            };
+            remove.textContent = "Delete";
 
-            deleteCell.appendChild(deleteButton);
-             
+            remove.className = "danger";
 
-             
-            
-const editButton = document.createElement("button");
+            remove.onclick = () =>
+                deleteTransaction(transaction.id);
 
-editButton.textContent = "Edit";
-editButton.style.background = "#8b5cf6";
-editButton.style.color = "white";
-editButton.style.padding = "8px 14px";
-editButton.style.border = "none";
-editButton.style.borderRadius = "6px";
-editButton.style.marginLeft = "8px";
-editButton.style.cursor = "pointer";
+            actions.append(edit, remove);
 
-editButton.onclick = async function() {
+        }
+
+    } catch (error) {
+
+        table.replaceChildren();
+
+        const cell = table.insertRow().insertCell();
+
+        cell.colSpan = 6;
+
+        cell.textContent = error.message;
+
+    }
+
+}
+
+
+// ADD TRANSACTION
+
+$("transactionDate").value = today();
+
+$("transactionForm").addEventListener("submit", async event => {
+
+    event.preventDefault();
+
+    const transaction = {
+
+        card_id: Number($("transactionCard").value),
+
+        merchant: $("merchant").value.trim(),
+
+        category: $("category").value,
+
+        amount: Number($("transactionAmount").value),
+
+        transaction_date: $("transactionDate").value
+
+    };
+
+    if (
+
+        transaction.card_id <= 0 ||
+        !transaction.merchant ||
+        !Number.isFinite(transaction.amount) ||
+        transaction.amount <= 0 ||
+        !transaction.transaction_date
+
+    ) {
+
+        setMessage(
+            "transactionMessage",
+            "Invalid transaction details."
+        );
+
+        return;
+
+    }
+
+    const button = event.submitter;
+
+    button.disabled = true;
+
+    try {
+
+        await apiFetch("/transactions", {
+
+            method: "POST",
+
+            body: JSON.stringify(transaction)
+
+        });
+
+        $("transactionForm").reset();
+
+        $("transactionDate").value = today();
+
+        setMessage(
+            "transactionMessage",
+            "Transaction added successfully!",
+            true
+        );
+
+        await loadAll();
+
+    } catch (error) {
+
+        setMessage(
+            "transactionMessage",
+            error.message
+        );
+
+    } finally {
+
+        button.disabled = false;
+
+    }
+
+});
+
+
+// EDIT TRANSACTION
+
+async function editTransaction(transaction) {
 
     const merchant = prompt(
-        "Merchant Name:",
-        transaction.merchant
+        "Merchant:", transaction.merchant
     );
+
     if (merchant === null) return;
 
     const category = prompt(
-        "Category:",
-        transaction.category
+        "Category:", transaction.category
     );
+
     if (category === null) return;
 
-    const amountInput = prompt(
-        "Amount:",
-        transaction.amount
+    const amountText = prompt(
+        "Amount:", transaction.amount
     );
-    if (amountInput === null) return;
 
-    const dateInput = prompt(
-        "Transaction Date (YYYY-MM-DD):",
+    if (amountText === null) return;
+
+    const dateText = prompt(
+        "Date (YYYY-MM-DD):",
         transaction.transaction_date
     );
-    if (dateInput === null) return;
 
-    const amount = Number(amountInput);
+    if (dateText === null) return;
+
+    const amount = Number(amountText);
 
     if (
+
         !merchant.trim() ||
         !category.trim() ||
-        !amountInput.trim() ||
+        !amountText.trim() ||
         !Number.isFinite(amount) ||
         amount <= 0 ||
-        !/^\d{4}-\d{2}-\d{2}$/.test(dateInput) ||
-        Number.isNaN(Date.parse(dateInput))
+        !/^\d{4}-\d{2}-\d{2}$/.test(dateText) ||
+        Number.isNaN(Date.parse(dateText))
+
     ) {
-        alert("Please enter valid transaction details.");
+
+        alert("Invalid transaction details.");
+
         return;
+
     }
 
     try {
-        const response = await fetch(
-            "/transactions/" + transaction.id,
-            {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    card_id: transaction.card_id,
-                    merchant: merchant.trim(),
-                    category: category.trim(),
-                    amount: amount,
-                    transaction_date: dateInput
-                })
-            }
-        );
 
-        if (!response.ok) {
-            throw new Error("Update failed");
-        }
+        await apiFetch("/transactions/" + transaction.id, {
 
-        alert("Transaction updated successfully!");
-        loadTransactions();
+            method: "PUT",
 
-    } catch (error) {
-        alert("Unable to update transaction.");
-    }
-};
+            body: JSON.stringify({
 
-deleteCell.appendChild(editButton);
+                card_id: transaction.card_id,
+
+                merchant: merchant.trim(),
+
+                category: category.trim(),
+
+                amount: amount,
+
+                transaction_date: dateText
+
+            })
 
         });
 
+        await loadAll();
+
+        alert("Transaction updated!");
+
     } catch (error) {
-        table.innerHTML = "";
-        const row = table.insertRow();
-        const cell = row.insertCell();
-        cell.colSpan = 5;
-        cell.textContent = "Unable to load transactions.";
+
+        alert(error.message);
+
     }
+
 }
 
-loadTransactions();
-</script>
 
+// DELETE TRANSACTION
 
-<section class="card" style="margin-top: 30px;">
-    <h2>Add Transaction</h2>
+async function deleteTransaction(id) {
 
-    <form id="transactionForm">
-        <p>Credit Card</p>
-        <select id="transactionCard" required>
-            <option value="">Select Credit Card</option>
-        </select>
-
-        <p>Merchant Name</p>
-        <input id="merchant" placeholder="Amazon" required>
-
-        <p>Category</p>
-        <select id="category" required>
-            <option value="Shopping">Shopping</option>
-            <option value="Food">Food</option>
-            <option value="Travel">Travel</option>
-            <option value="Bills">Bills</option>
-            <option value="Others">Others</option>
-        </select>
-
-        <p>Amount</p>
-        <input id="transactionAmount"
-               type="number" min="0.01" step="0.01" required>
-
-        <p>Transaction Date</p>
-        <input id="transactionDate" type="date" required>
-
-        <br><br>
-        <button type="submit">Add Transaction</button>
-    </form>
-
-    <p id="transactionMessage"></p>
-</section>
-
-<script>
-async function loadCardOptions() {
-    const response = await fetch("/card-summary");
-    const data = await response.json();
-
-    const dropdown = document.getElementById("transactionCard");
-    dropdown.innerHTML = '<option value="">Select Credit Card</option>';
-
-    data.cards.forEach(card => {
-        const option = document.createElement("option");
-        option.value = card.id;
-        option.textContent = card.bank_name + " - " + card.card_name;
-        dropdown.appendChild(option);
-    });
-}
-
-document.getElementById("transactionDate").value =
-    new Date().toLocaleDateString("en-CA");
-
-document.getElementById("transactionForm").addEventListener(
-    "submit",
-    async function(event) {
-        event.preventDefault();
-
-        const message = document.getElementById("transactionMessage");
-
-        const transaction = {
-            card_id: Number(
-                document.getElementById("transactionCard").value
-            ),
-            merchant: document.getElementById("merchant").value,
-            category: document.getElementById("category").value,
-            amount: Number(
-                document.getElementById("transactionAmount").value
-            ),
-            transaction_date:
-                document.getElementById("transactionDate").value
-        };
-
-        try {
-            const response = await fetch("/transactions", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(transaction)
-            });
-
-            if (!response.ok) {
-                throw new Error("Transaction could not be saved");
-            }
-
-            message.textContent = "Transaction added successfully!";
-            document.getElementById("transactionForm").reset();
-
-            loadTransactions();
-
-        } catch (error) {
-            message.textContent = "Unable to add transaction.";
-        }
-    }
-);
-
-loadCardOptions();
-</script>
-
-<section class="card" style="margin-top: 30px;">
-    <h2>Spending Analytics</h2>
-
-    <h3 id="totalSpending">Total Spending: ₹0</h3>
-
-    <p id="transactionCount">Total Transactions: 0</p>
-
-    <div id="spendingChart"></div>
-</section>
-
-<script>
-async function loadSpendingAnalytics() {
-    const chart = document.getElementById("spendingChart");
+    if (!confirm("Delete this transaction?")) return;
 
     try {
-        const response = await fetch("/spending-analytics");
-        if (!response.ok) {
-            throw new Error("Unable to load spending data");
-        }
 
-        const data = await response.json();
+        await apiFetch("/transactions/" + id, {
 
-        document.getElementById("totalSpending").textContent =
-            "Total Spending: ₹" +
-            Number(data.total_spending).toLocaleString("en-IN");
+            method: "DELETE"
 
-        document.getElementById("transactionCount").textContent =
-            "Total Transactions: " + data.total_transactions;
-
-        chart.innerHTML = "";
-
-        const categories = data.category_wise_spending;
-
-        if (categories.length === 0) {
-            chart.textContent = "No spending data available.";
-            return;
-        }
-
-        const maximum = Math.max(
-            ...categories.map(item => item.total_amount)
-        );
-
-        categories.forEach(item => {
-            const label = document.createElement("p");
-            label.textContent =
-                item.category + " — ₹" +
-                Number(item.total_amount).toLocaleString("en-IN");
-
-            const bar = document.createElement("div");
-            bar.style.background = "#39465e";
-            bar.style.height = "18px";
-            bar.style.borderRadius = "10px";
-            bar.style.marginBottom = "20px";
-            bar.style.overflow = "hidden";
-
-            const fill = document.createElement("div");
-            fill.style.background = "#a78bfa";
-            fill.style.height = "100%";
-            fill.style.width =
-                (item.total_amount / maximum * 100) + "%";
-
-            bar.appendChild(fill);
-            chart.appendChild(label);
-            chart.appendChild(bar);
         });
 
-    } catch (error) {
-        chart.textContent = "Unable to load spending analytics.";
-        console.error(error);
-    }
-}
+        await loadAll();
 
-loadSpendingAnalytics();
-</script>
-
-
-<section class="card" style="margin-top: 30px;">
-    <h2>Monthly Spending Analytics</h2>
-    <div id="monthlyChart">
-        <p>Loading monthly spending...</p>
-    </div>
-</section>
-
-<script>
-async function loadMonthlySpending() {
-    const chart = document.getElementById("monthlyChart");
-
-    try {
-        const response = await fetch("/monthly-spending");
-
-        if (!response.ok) {
-            throw new Error("Unable to fetch monthly spending");
-        }
-
-        const data = await response.json();
-        chart.innerHTML = "";
-
-        if (data.monthly_spending.length === 0) {
-            chart.textContent = "No monthly spending data found.";
-            return;
-        }
-
-        const maximum = Math.max(
-            ...data.monthly_spending.map(item => item.total_spending)
-        );
-
-        data.monthly_spending.forEach(item => {
-            const container = document.createElement("div");
-            container.style.marginBottom = "20px";
-
-            const label = document.createElement("p");
-            label.textContent =
-                item.month + " — ₹" +
-                Number(item.total_spending).toLocaleString("en-IN");
-
-            const bar = document.createElement("div");
-            bar.style.background = "#39465e";
-            bar.style.height = "20px";
-            bar.style.borderRadius = "10px";
-            bar.style.overflow = "hidden";
-
-            const fill = document.createElement("div");
-            fill.style.background = "#a78bfa";
-            fill.style.height = "100%";
-            fill.style.width = (
-                maximum > 0
-                ? item.total_spending / maximum * 100
-                : 0
-            ) + "%";
-
-            bar.appendChild(fill);
-            container.appendChild(label);
-            container.appendChild(bar);
-            chart.appendChild(container);
-        });
+        alert("Transaction deleted!");
 
     } catch (error) {
-        chart.textContent = "Unable to load monthly spending.";
-        console.error(error);
+
+        alert(error.message);
+
     }
+
 }
 
-loadMonthlySpending();
-</script>
 
+// CHARTS
 
-<section class="card" style="margin-top: 30px;">
-    <h2>AI Credit Card Recommendation</h2>
+function drawBars(container, data, labelKey, valueKey) {
 
-    <p>Find the best credit card for your purchase.</p>
+    container.replaceChildren();
 
-    <form id="recommendForm">
-        <p>Purchase Category</p>
-        <select id="recommendCategory" required>
-            <option value="Shopping">Shopping</option>
-            <option value="Food">Food</option>
-            <option value="Travel">Travel</option>
-            <option value="Bills">Bills</option>
-            <option value="Others">Others</option>
-        </select>
+    if (!data.length) {
 
-        <p>Purchase Amount</p>
-        <input
-            id="recommendAmount"
-            type="number"
-            min="1"
-            step="0.01"
-            placeholder="10000"
-            required
-        >
+        container.textContent = "No spending data available.";
 
-        <br><br>
-        <button type="submit">Find Best Card</button>
-    </form>
+        return;
 
-    <div id="recommendResult" style="margin-top:20px;"></div>
-</section>
-
-<script>
-document.getElementById("recommendForm").addEventListener(
-    "submit",
-    async function(event) {
-        event.preventDefault();
-
-        const category =
-            document.getElementById("recommendCategory").value;
-
-        const amount = Number(
-            document.getElementById("recommendAmount").value
-        );
-
-        const result = document.getElementById("recommendResult");
-        result.textContent = "Finding best card...";
-
-        try {
-            const response = await fetch("/recommend-card", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    category: category,
-                    amount: amount
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error("Recommendation failed");
-            }
-
-            const data = await response.json();
-            result.innerHTML = "";
-
-            if (!data.best_card) {
-                result.textContent =
-                    "No eligible card found. Check reward rates and available limits.";
-                return;
-            }
-
-            const title = document.createElement("h3");
-            title.textContent =
-                "Recommended: " +
-                data.best_card.bank_name + " - " +
-                data.best_card.card_name;
-
-            const cashback = document.createElement("p");
-            cashback.textContent =
-                "Estimated Cashback: ₹" +
-                Number(data.best_card.estimated_cashback)
-                    .toLocaleString("en-IN");
-
-            const rate = document.createElement("p");
-            rate.textContent =
-                "Reward Rate: " +
-                data.best_card.reward_percent + "%";
-
-            result.appendChild(title);
-            result.appendChild(cashback);
-            result.appendChild(rate);
-
-            const heading = document.createElement("h4");
-            heading.textContent = "Other Eligible Cards";
-            result.appendChild(heading);
-
-            data.recommendations.slice(1).forEach(card => {
-                const item = document.createElement("p");
-                item.textContent =
-                    card.bank_name + " - " + card.card_name +
-                    " | Cashback: ₹" +
-                    Number(card.estimated_cashback)
-                        .toLocaleString("en-IN");
-                result.appendChild(item);
-            });
-
-        } catch (error) {
-            result.textContent =
-                "Unable to calculate recommendation.";
-            console.error(error);
-        }
     }
-);
-</script>
 
-
-
-    
-        
-
-<section class="card" style="margin-top:30px;">
-    <h2>Credit Card Rewards Catalog</h2>
-    <p>Available reward rates for supported credit cards.</p>
-
-    <div style="overflow-x:auto;">
-        <table style="width:100%; border-collapse:collapse;">
-            <thead>
-                <tr>
-                    <th style="padding:12px; text-align:left;">Bank</th>
-                    <th style="padding:12px; text-align:left;">Card</th>
-                    <th style="padding:12px; text-align:left;">Category</th>
-                    <th style="padding:12px; text-align:left;">Reward Rate</th>
-                </tr>
-            </thead>
-
-            <tbody id="rewardCatalogList">
-                <tr>
-                    <td colspan="4">Loading rewards...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<script>
-async function loadRewardCatalog() {
-    const table = document.getElementById("rewardCatalogList");
-
-    try {
-        const response = await fetch("/reward-catalog");
-
-        if (!response.ok) {
-            throw new Error("Failed to load rewards");
-        }
-
-        const data = await response.json();
-        table.innerHTML = "";
-
-        if (data.rewards.length === 0) {
-            const row = table.insertRow();
-            const cell = row.insertCell();
-            cell.colSpan = 4;
-            cell.textContent = "No rewards available.";
-            return;
-        }
-
-        data.rewards.forEach(reward => {
-            const row = table.insertRow();
-
-            const values = [
-                reward.bank_name,
-                reward.card_name,
-                reward.category,
-                reward.reward_percent + "%"
-            ];
-
-            values.forEach(value => {
-                const cell = row.insertCell();
-                cell.textContent = value;
-                cell.style.padding = "12px";
-                cell.style.borderBottom = "1px solid #39465e";
-            });
-        });
-
-    } catch (error) {
-        table.innerHTML = "";
-        const row = table.insertRow();
-        const cell = row.insertCell();
-        cell.colSpan = 4;
-        cell.textContent = "Unable to load reward catalog.";
-    }
-}
-
-loadRewardCatalog();
-</script>
-
-
-<section class="card" style="margin-top:30px;">
-    <h2>AI Spending Prediction</h2>
-    <p>Next month's estimated spending using Random Forest.</p>
-
-    <h1 id="mlPredictionAmount">Loading...</h1>
-
-    <p id="mlPredictionStatus">
-        Checking ML prediction...
-    </p>
-
-    <small>
-        Demo prediction using synthetic training data.
-        Not a real financial forecast.
-    </small>
-</section>
-
-<script>
-async function loadMLPrediction() {
-    const amountElement = document.getElementById("mlPredictionAmount");
-    const statusElement = document.getElementById("mlPredictionStatus");
-
-    try {
-        const response = await fetch("/api/ml/predict-spending");
-
-        if (!response.ok) {
-            throw new Error("Prediction API unavailable");
-        }
-
-        const data = await response.json();
-
-        const amount = Number(data.predicted_spending);
-
-        amountElement.textContent = amount.toLocaleString("en-IN", {
-            style: "currency",
-            currency: "INR"
-        });
-
-        statusElement.textContent =
-            "Model: " + data.model + " | Status: Demo Prediction";
-
-    } catch (error) {
-        amountElement.textContent = "Unavailable";
-        statusElement.textContent = "Unable to load ML prediction.";
-    }
-}
-
-loadMLPrediction();
-</script>
-
-
-<section class="card" style="margin-top:30px;">
-    <h2>AI Spending Pattern Analysis</h2>
-    <p>Analyse monthly spending using K-Means clustering.</p>
-
-    <label for="clusterAmount">Monthly Spending (₹)</label>
-    <input
-        type="number"
-        id="clusterAmount"
-        min="0"
-        value="20000"
-        placeholder="Enter monthly spending"
-    >
-
-    <button type="button" onclick="classifySpending()">
-        Analyse Spending
-    </button>
-
-    <h3 id="clusterResult">Your spending pattern will appear here.</h3>
-
-    <small>
-        Demo ML model trained on synthetic spending data.
-        Results are not a financial risk assessment.
-    </small>
-</section>
-
-<script>
-async function classifySpending() {
-    const amount = Number(
-        document.getElementById("clusterAmount").value
+    const maximum = Math.max(
+        1,
+        ...data.map(item => Number(item[valueKey]))
     );
 
-    const result = document.getElementById("clusterResult");
+    for (const item of data) {
 
-    if (!Number.isFinite(amount) || amount < 0) {
-        result.textContent = "Enter a valid amount.";
-        return;
+        const label = document.createElement("p");
+
+        label.textContent =
+            item[labelKey] + " — " + money(item[valueKey]);
+
+        const bar = document.createElement("div");
+
+        bar.className = "chart-bar";
+
+        const fill = document.createElement("div");
+
+        fill.className = "chart-fill";
+
+        fill.style.width =
+            (Number(item[valueKey]) / maximum * 100) + "%";
+
+        bar.appendChild(fill);
+
+        container.append(label, bar);
+
     }
 
-    result.textContent = "Analysing...";
+}
+
+
+async function loadSpendingAnalytics() {
 
     try {
-        const response = await fetch("/api/ml/classify-spending", {
+
+        const data = await apiFetch("/spending-analytics");
+
+        $("totalSpending").textContent =
+            "Total Spending: " + money(data.total_spending);
+
+        $("transactionCount").textContent =
+            "Total Transactions: " + data.total_transactions;
+
+        drawBars(
+
+            $("spendingChart"),
+
+            data.category_wise_spending,
+
+            "category",
+
+            "total_amount"
+
+        );
+
+    } catch (error) {
+
+        $("spendingChart").textContent = error.message;
+
+    }
+
+}
+
+
+async function loadMonthlySpending() {
+
+    try {
+
+        const data = await apiFetch("/monthly-spending");
+
+        drawBars(
+
+            $("monthlyChart"),
+
+            data.monthly_spending,
+
+            "month",
+
+            "total_spending"
+
+        );
+
+    } catch (error) {
+
+        $("monthlyChart").textContent = error.message;
+
+    }
+
+}
+
+
+// REWARD RECOMMENDATION
+
+$("recommendForm").addEventListener("submit", async event => {
+
+    event.preventDefault();
+
+    const result = $("recommendResult");
+
+    result.textContent = "Finding best card...";
+
+    try {
+
+        const data = await apiFetch("/api/v2/recommend-card", {
+
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+
             body: JSON.stringify({
-                monthly_spending: amount
+
+                category: $("recommendCategory").value,
+
+                amount: Number($("recommendAmount").value),
+
+                merchant:
+                    $("recommendMerchant").value.trim() || null
+
             })
+
         });
 
-        if (!response.ok) {
-            throw new Error("ML API error");
+        result.replaceChildren();
+
+        if (!data.best_card) {
+
+            result.textContent = "No eligible card found.";
+
+            return;
+
         }
 
-        const data = await response.json();
+        const heading = document.createElement("h3");
 
-        result.textContent =
+        heading.textContent =
+            "Recommended: " +
+            data.best_card.bank_name + " - " +
+            data.best_card.card_name;
+
+        const cashback = document.createElement("p");
+
+        cashback.textContent =
+            "Estimated Cashback: " +
+            money(data.best_card.estimated_cashback);
+
+        const rate = document.createElement("p");
+
+        rate.textContent =
+            "Reward Rate: " +
+            data.best_card.reward_percent + "%";
+
+        result.append(heading, cashback, rate);
+
+        for (const card of data.recommendations.slice(1)) {
+
+            const line = document.createElement("p");
+
+            line.textContent =
+                card.bank_name + " - " +
+                card.card_name +
+                " | Cashback: " +
+                money(card.estimated_cashback);
+
+            result.appendChild(line);
+
+        }
+
+    } catch (error) {
+
+        result.textContent = error.message;
+
+    }
+
+});
+
+
+// REWARD CATALOG
+
+async function loadRewardCatalog() {
+
+    const table = $("rewardCatalogList");
+
+    try {
+
+        const data = await apiFetch("/api/v2/reward-catalog");
+
+        table.replaceChildren();
+
+        for (const reward of data.rewards) {
+
+            const row = table.insertRow();
+
+            [
+
+                reward.bank_name,
+
+                reward.card_name,
+
+                reward.category,
+
+                reward.reward_percent + "%"
+
+            ].forEach(value => {
+
+                row.insertCell().textContent = value;
+
+            });
+
+        }
+
+        if (!data.rewards.length) {
+
+            const cell = table.insertRow().insertCell();
+
+            cell.colSpan = 4;
+
+            cell.textContent = "No reward data.";
+
+        }
+
+    } catch (error) {
+
+        table.replaceChildren();
+
+        const cell = table.insertRow().insertCell();
+
+        cell.colSpan = 4;
+
+        cell.textContent = error.message;
+
+    }
+
+}
+
+
+// ML PREDICTION
+
+async function loadMLPrediction() {
+
+    try {
+
+        const data = await apiFetch(
+            "/api/ml/predict-spending"
+        );
+
+        $("mlPredictionAmount").textContent =
+            money(data.predicted_spending);
+
+        $("mlPredictionStatus").textContent =
+            "Model: " + data.model + " | Demo Prediction";
+
+    } catch (error) {
+
+        $("mlPredictionAmount").textContent = "Unavailable";
+
+        $("mlPredictionStatus").textContent = error.message;
+
+    }
+
+}
+
+
+// CLUSTERING
+
+$("clusterButton").onclick = async () => {
+
+    const input = $("clusterAmount");
+
+    const amount = Number(input.value);
+
+    if (
+
+        input.value.trim() === "" ||
+        !Number.isFinite(amount) ||
+        amount < 0
+
+    ) {
+
+        $("clusterResult").textContent =
+            "Enter a valid amount.";
+
+        return;
+
+    }
+
+    try {
+
+        const data = await apiFetch(
+            "/api/ml/classify-spending",
+            {
+
+                method: "POST",
+
+                body: JSON.stringify({
+                    monthly_spending: amount
+                })
+
+            }
+        );
+
+        $("clusterResult").textContent =
             "Spending Pattern: " + data.spending_pattern;
 
     } catch (error) {
-        result.textContent = "Unable to analyse spending.";
+
+        $("clusterResult").textContent = error.message;
+
     }
-}
-</script>
+
+};
 
 
-<section style="margin: 25px 0; padding: 20px; background: #1e293b; color: white; border-radius: 12px;">
-    <h2>AI Transaction Anomaly Detection</h2>
+// ANOMALY DETECTION
 
-    <p>Check whether a transaction amount looks unusual.</p>
+$("anomalyButton").onclick = async () => {
 
-    <input
-        type="number"
-        id="anomalyAmount"
-        placeholder="Enter transaction amount"
-        min="1"
-        style="padding: 10px; border-radius: 6px;"
-    >
+    const input = $("anomalyAmount");
 
-    <button onclick="detectAnomaly()" style="padding: 10px;">
-        Detect Anomaly
-    </button>
+    const amount = Number(input.value);
 
-    <p id="anomalyResult"></p>
+    if (
 
-    <small>
-        Demo ML model trained on synthetic transactions.
-        Unusual does not necessarily mean fraudulent.
-    </small>
-</section>
+        input.value.trim() === "" ||
+        !Number.isFinite(amount) ||
+        amount <= 0
 
-<script>
-async function detectAnomaly() {
-    const result = document.getElementById("anomalyResult");
-    const amount = Number(document.getElementById("anomalyAmount").value);
+    ) {
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-        result.textContent = "Please enter a valid positive amount.";
+        $("anomalyResult").textContent =
+            "Enter a valid amount.";
+
         return;
-    }
 
-    result.textContent = "Checking transaction...";
+    }
 
     try {
-        const response = await fetch("/api/ml/detect-anomaly", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ amount: amount })
-        });
 
-        if (!response.ok) {
-            throw new Error("API request failed");
-        }
+        const data = await apiFetch(
+            "/api/ml/detect-anomaly",
+            {
 
-        const data = await response.json();
+                method: "POST",
 
-        result.textContent =
-            "₹" + amount.toLocaleString("en-IN") +
-            " — " + data.status +
+                body: JSON.stringify({
+                    amount: amount
+                })
+
+            }
+        );
+
+        $("anomalyResult").textContent =
+            money(amount) + " — " +
+            data.status +
             " (Score: " + data.anomaly_score + ")";
 
-        result.style.color = data.is_anomaly ? "#fca5a5" : "#86efac";
+        $("anomalyResult").style.color =
+            data.is_anomaly ? "#fca5a5" : "#86efac";
 
     } catch (error) {
-        result.textContent = "Unable to check transaction.";
-        result.style.color = "#fca5a5";
+
+        $("anomalyResult").textContent = error.message;
+
     }
-}
-</script>
+
+};
 
 
-<section style="margin: 25px 0; padding: 20px; background: #1e293b; color: white; border-radius: 12px;">
-    <h2>AI Financial Insights</h2>
+// FINANCIAL INSIGHTS
 
-    <p>Compare your spending between two months.</p>
+$("insightsButton").onclick = async () => {
 
-    <input
-        type="number"
-        id="currentMonthSpending"
-        placeholder="Current month spending"
-        min="0"
-        style="padding: 10px; border-radius: 6px;"
-    >
+    const currentInput = $("currentMonthSpending");
 
-    <input
-        type="number"
-        id="previousMonthSpending"
-        placeholder="Previous month spending"
-        min="0"
-        style="padding: 10px; border-radius: 6px;"
-    >
-
-    <button onclick="getFinancialInsights()" style="padding: 10px;">
-        Generate Insights
-    </button>
-
-    <p id="financialInsightsResult"></p>
-
-    <small>
-        Insights are generated using rule-based analysis.
-        They are not personalised financial advice.
-    </small>
-</section>
-
-<script>
-async function getFinancialInsights() {
-    const result = document.getElementById("financialInsightsResult");
-
-    const currentInput = document.getElementById("currentMonthSpending");
-    const previousInput = document.getElementById("previousMonthSpending");
+    const previousInput = $("previousMonthSpending");
 
     const current = Number(currentInput.value);
+
     const previous = Number(previousInput.value);
 
     if (
+
         currentInput.value.trim() === "" ||
         previousInput.value.trim() === "" ||
         !Number.isFinite(current) ||
         !Number.isFinite(previous) ||
         current < 0 ||
         previous < 0
+
     ) {
-        result.textContent = "Please enter valid spending amounts.";
+
+        $("financialInsightsResult").textContent =
+            "Enter valid spending amounts.";
+
         return;
+
     }
 
-    result.textContent = "Generating insights...";
-
     try {
-        const response = await fetch("/api/insights/monthly", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                current_month: current,
-                previous_month: previous
-            })
-        });
 
-        if (!response.ok) {
-            throw new Error("Request failed");
-        }
+        const data = await apiFetch(
+            "/api/insights/monthly",
+            {
 
-        const data = await response.json();
+                method: "POST",
 
-        const difference = Number(data.difference).toLocaleString("en-IN");
+                body: JSON.stringify({
+
+                    current_month: current,
+
+                    previous_month: previous
+
+                })
+
+            }
+        );
 
         const change = data.percentage_change === null
             ? "Not available"
             : data.percentage_change + "%";
 
-        result.textContent =
-            "Difference: ₹" + difference +
+        $("financialInsightsResult").textContent =
+
+            "Difference: " + money(data.difference) +
+
             " | Change: " + change +
+
             " | " + data.insight;
 
     } catch (error) {
-        result.textContent = "Unable to generate insights.";
+
+        $("financialInsightsResult").textContent =
+            error.message;
+
     }
-}
-</script>
+
+};
 
 
-<!-- Credit Card Bill Management -->
-<section style="margin: 25px 0; padding: 20px; background: #1e293b; color: white; border-radius: 12px;">
-    <h2>Credit Card Bill Management</h2>
-    <p>View bills, due dates and payment status.</p>
+// BILL MANAGEMENT
 
-    <button onclick="loadBills()" style="padding: 10px;">
-        Refresh Bills
-    </button>
-
-    <div id="billsList" style="margin-top: 15px;">
-        Loading bills...
-    </div>
-</section>
-
-<script>
 async function loadBills() {
-    const container = document.getElementById("billsList");
+
+    const container = $("billsList");
+
     container.textContent = "Loading bills...";
 
     try {
-        const response = await fetch("/api/bills");
 
-        if (!response.ok) {
-            throw new Error("Failed to fetch bills");
-        }
-
-        const data = await response.json();
+        const data = await apiFetch("/api/bills");
 
         container.replaceChildren();
 
-        if (!data.bills || data.bills.length === 0) {
+        if (!data.bills.length) {
+
             container.textContent = "No bills available.";
+
             return;
+
         }
 
         for (const bill of data.bills) {
-            const card = document.createElement("div");
 
-            card.style.cssText =
-                "padding:15px;margin:10px 0;" +
-                "background:#334155;border-radius:8px;";
+            const box = document.createElement("div");
+
+            box.className = "credit-card";
 
             const heading = document.createElement("h3");
+
             heading.textContent =
-                bill.bank_name + " " + bill.card_name;
+                bill.bank_name + " - " + bill.card_name;
 
             const amount = document.createElement("p");
-            amount.textContent =
-                "Bill Amount: ₹" +
-                Number(bill.bill_amount).toLocaleString("en-IN");
 
-            const dueDate = document.createElement("p");
-            dueDate.textContent = "Due Date: " + bill.due_date;
+            amount.textContent =
+                "Bill Amount: " + money(bill.bill_amount);
+
+            const due = document.createElement("p");
+
+            due.textContent =
+                "Due Date: " + bill.due_date;
 
             const status = document.createElement("p");
-            status.textContent = "Status: " + bill.status;
 
-            const historyButton = document.createElement("button");
-            historyButton.textContent = "View Payment History";
-            historyButton.style.padding = "8px";
+            status.textContent =
+                "Status: " + bill.status;
 
-            const historyResult = document.createElement("div");
-            historyResult.style.marginTop = "10px";
+            const button = document.createElement("button");
 
-            historyButton.addEventListener("click", async () => {
-                historyResult.textContent = "Loading payments...";
+            button.textContent = "View Payment History";
+
+            const history = document.createElement("div");
+
+            button.onclick = async () => {
 
                 try {
-                    const res = await fetch(
+
+                    const details = await apiFetch(
                         "/api/bills/" + bill.id + "/payments"
                     );
 
-                    if (!res.ok) {
-                        throw new Error("Failed to load payments");
-                    }
-
-                    const history = await res.json();
-
-                    historyResult.replaceChildren();
+                    history.replaceChildren();
 
                     const summary = document.createElement("p");
+
                     summary.textContent =
-                        "Paid: ₹" +
-                        Number(history.total_paid).toLocaleString("en-IN") +
-                        " | Remaining: ₹" +
-                        Number(history.remaining_amount).toLocaleString("en-IN");
 
-                    historyResult.appendChild(summary);
+                        "Paid: " + money(details.total_paid) +
 
-                    for (const payment of history.payments) {
+                        " | Remaining: " +
+                        money(details.remaining_amount);
+
+                    history.appendChild(summary);
+
+                    for (const payment of details.payments) {
+
                         const line = document.createElement("p");
+
                         line.textContent =
-                            "₹" +
-                            Number(payment.amount).toLocaleString("en-IN") +
+
+                            money(payment.amount) +
+
                             " paid on " + payment.payment_date;
 
-                        historyResult.appendChild(line);
+                        history.appendChild(line);
+
                     }
 
-                    if (history.payments.length === 0) {
+                    if (!details.payments.length) {
+
                         const empty = document.createElement("p");
-                        empty.textContent = "No payments recorded.";
-                        historyResult.appendChild(empty);
+
+                        empty.textContent =
+                            "No payments recorded.";
+
+                        history.appendChild(empty);
+
                     }
 
                 } catch (error) {
-                    historyResult.textContent =
-                        "Unable to load payment history.";
-                }
-            });
 
-            card.append(
+                    history.textContent = error.message;
+
+                }
+
+            };
+
+            box.append(
+
                 heading,
+
                 amount,
-                dueDate,
+
+                due,
+
                 status,
-                historyButton,
-                historyResult
+
+                button,
+
+                history
+
             );
 
-            container.appendChild(card);
+            container.appendChild(box);
+
         }
 
     } catch (error) {
-        container.textContent = "Unable to load bills.";
+
+        container.textContent = error.message;
+
     }
+
 }
 
-loadBills();
+
+$("refreshBills").onclick = loadBills;
+
+
+// INITIAL STATE
+
+$("dashboard").hidden = true;
+
+$("authScreen").hidden = false;
+
+switchAuth("login");
+
+
+// Avoid restoring a previous user's dashboard from browser history.
+
+window.addEventListener("pageshow", event => {
+
+    if (event.persisted) {
+
+        window.location.reload();
+
+    }
+
+});
+
 </script>
 
 </body>

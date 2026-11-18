@@ -1,11 +1,18 @@
 
+import csv
 from pathlib import Path
 
 import joblib
 import numpy as np
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-router = APIRouter(prefix="/api/ml", tags=["Machine Learning"])
+from auth import get_current_user
+
+
+router = APIRouter(
+    prefix="/api/ml",
+    tags=["Machine Learning"]
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = BASE_DIR / "random_forest_model.pkl"
@@ -13,23 +20,34 @@ DATA_PATH = BASE_DIR / "demo_monthly_spending.csv"
 
 
 @router.get("/predict-spending")
-def predict_spending():
-    if not MODEL_PATH.exists():
+def predict_spending(
+    current_user=Depends(get_current_user)
+):
+    if not MODEL_PATH.is_file():
         raise HTTPException(
             status_code=503,
             detail="ML model not trained yet"
         )
 
-    if not DATA_PATH.exists():
+    if not DATA_PATH.is_file():
         raise HTTPException(
             status_code=503,
             detail="Training data not found"
         )
 
-    import csv
+    try:
+        with open(
+            DATA_PATH,
+            newline="",
+            encoding="utf-8"
+        ) as file:
+            rows = list(csv.DictReader(file))
 
-    with open(DATA_PATH, newline="", encoding="utf-8") as file:
-        rows = list(csv.DictReader(file))
+    except (OSError, csv.Error):
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to read training data"
+        )
 
     if len(rows) < 3:
         raise HTTPException(
@@ -42,6 +60,10 @@ def predict_spending():
             float(row["total_spending"])
             for row in rows[-3:]
         ]
+
+        if not all(np.isfinite(value) for value in spending):
+            raise ValueError("Non-finite spending value")
+
     except (ValueError, KeyError, TypeError):
         raise HTTPException(
             status_code=400,
@@ -54,7 +76,14 @@ def predict_spending():
 
     try:
         model = joblib.load(MODEL_PATH)
-        prediction = float(model.predict(features)[0])
+
+        prediction = float(
+            model.predict(features)[0]
+        )
+
+        if not np.isfinite(prediction):
+            raise ValueError("Invalid prediction")
+
     except Exception:
         raise HTTPException(
             status_code=500,
@@ -62,7 +91,9 @@ def predict_spending():
         )
 
     return {
-        "predicted_spending": round(max(0, prediction), 2),
+        "predicted_spending": round(
+            max(0, prediction), 2
+        ),
         "currency": "INR",
         "model": "Random Forest Regressor",
         "data_source": "synthetic_demo",

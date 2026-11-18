@@ -1,17 +1,32 @@
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/api/insights", tags=["Financial Insights"])
+from auth import get_current_user
+
+
+router = APIRouter(
+    prefix="/api/insights",
+    tags=["Financial Insights"]
+)
 
 
 class SpendingInput(BaseModel):
-    current_month: float = Field(ge=0)
-    previous_month: float = Field(ge=0)
+    current_month: float = Field(
+        ge=0,
+        allow_inf_nan=False
+    )
+    previous_month: float = Field(
+        ge=0,
+        allow_inf_nan=False
+    )
 
 
 @router.post("/monthly")
-def monthly_insights(data: SpendingInput):
+def monthly_insights(
+    data: SpendingInput,
+    current_user=Depends(get_current_user)
+):
     current = data.current_month
     previous = data.previous_month
 
@@ -19,6 +34,7 @@ def monthly_insights(data: SpendingInput):
 
     if previous == 0:
         percentage_change = None
+
         if current > 0:
             insight = (
                 "Spending has started this month. "

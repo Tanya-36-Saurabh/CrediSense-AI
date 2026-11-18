@@ -1,7 +1,8 @@
-
 import sqlite3
+from pathlib import Path
 
-conn = sqlite3.connect("credisense.db")
+DB_PATH = Path(__file__).resolve().parent / "credisense.db"
+conn = sqlite3.connect(DB_PATH)
 
 conn.execute("""
 CREATE TABLE IF NOT EXISTS cards (

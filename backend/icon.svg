@@ -1,0 +1,47 @@
+
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="512"
+     height="512"
+     viewBox="0 0 512 512">
+
+  <rect
+    width="512"
+    height="512"
+    rx="110"
+    fill="#101827"
+  />
+
+  <rect
+    x="82"
+    y="135"
+    width="348"
+    height="242"
+    rx="32"
+    fill="#8b5cf6"
+  />
+
+  <rect
+    x="82"
+    y="190"
+    width="348"
+    height="45"
+    fill="#6d28d9"
+  />
+
+  <circle
+    cx="350"
+    cy="310"
+    r="35"
+    fill="#ffffff"
+  />
+
+  <text
+    x="115"
+    y="330"
+    font-family="Arial, sans-serif"
+    font-size="104"
+    font-weight="bold"
+    fill="#ffffff"
+  >C</text>
+
+</svg>

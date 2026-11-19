@@ -7,7 +7,6 @@ import sqlite3
 from collections import deque
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from threading import Lock
 
 import jwt
@@ -18,8 +17,6 @@ from argon2.exceptions import (
     VerificationError,
     InvalidHashError
 )
-
-from dotenv import load_dotenv
 
 from fastapi import (
     APIRouter,
@@ -36,23 +33,18 @@ from fastapi.security import (
 
 from pydantic import BaseModel, Field
 
+from config import DB_PATH
+
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
-
-BASE_DIR = Path(__file__).resolve().parent
-
-DB_PATH = BASE_DIR / "credisense.db"
-
-load_dotenv(BASE_DIR / ".env")
 
 JWT_SECRET = os.environ.get("JWT_SECRET")
 
 JWT_ALGORITHM = "HS256"
 
 TOKEN_EXPIRE_MINUTES = 30
-
 
 if not JWT_SECRET or len(JWT_SECRET) < 32:
     raise RuntimeError(
@@ -65,15 +57,12 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
-
 password_hasher = PasswordHasher()
 
 security = HTTPBearer(auto_error=False)
 
-
-# Used to reduce login timing differences
-# between existing and nonexistent accounts.
-
+# Reduce login timing differences between
+# existing and nonexistent accounts.
 DUMMY_PASSWORD_HASH = password_hasher.hash(
     os.urandom(32).hex()
 )
@@ -85,30 +74,23 @@ DUMMY_PASSWORD_HASH = password_hasher.hash(
 
 @contextmanager
 def auth_database():
-
     conn = sqlite3.connect(
         DB_PATH,
         timeout=10
     )
 
     conn.row_factory = sqlite3.Row
-
     conn.execute("PRAGMA foreign_keys = ON")
 
     try:
-
         yield conn
-
         conn.commit()
 
     except Exception:
-
         conn.rollback()
-
         raise
 
     finally:
-
         conn.close()
 
 
@@ -117,25 +99,19 @@ def auth_database():
 # ==========================================
 
 LOGIN_MAX_ATTEMPTS = 10
-
 LOGIN_WINDOW_SECONDS = 300
 
 SIGNUP_MAX_ATTEMPTS = 5
-
 SIGNUP_WINDOW_SECONDS = 600
 
 MAX_RATE_LIMIT_KEYS = 10000
 
-
 rate_limit_store = {}
-
 rate_limit_lock = Lock()
 
 
 def get_client_ip(request: Request):
-
     if request.client:
-
         return request.client.host
 
     return "unknown"
@@ -146,41 +122,31 @@ def check_rate_limit(
     max_attempts,
     window_seconds
 ):
-
     now = time.monotonic()
 
     with rate_limit_lock:
 
-        # Remove expired rate-limit entries.
-
         expired_keys = []
 
         for existing_key, entry in rate_limit_store.items():
-
             timestamps, window = entry
 
             while (
                 timestamps
                 and now - timestamps[0] >= window
             ):
-
                 timestamps.popleft()
 
             if not timestamps:
-
                 expired_keys.append(existing_key)
 
         for expired_key in expired_keys:
-
             del rate_limit_store[expired_key]
-
-        # Prevent unlimited memory growth.
 
         if (
             key not in rate_limit_store
             and len(rate_limit_store) >= MAX_RATE_LIMIT_KEYS
         ):
-
             raise HTTPException(
                 status_code=429,
                 detail="Too many requests. Try again later.",
@@ -188,7 +154,6 @@ def check_rate_limit(
             )
 
         if key not in rate_limit_store:
-
             rate_limit_store[key] = (
                 deque(),
                 window_seconds
@@ -197,25 +162,23 @@ def check_rate_limit(
         attempts, _ = rate_limit_store[key]
 
         if len(attempts) >= max_attempts:
-
             retry_after = max(
                 1,
-                int(window_seconds - (now - attempts[0])) + 1
+                int(
+                    window_seconds
+                    - (now - attempts[0])
+                ) + 1
             )
 
             raise HTTPException(
-
                 status_code=429,
-
                 detail=(
                     "Too many attempts. "
                     "Please try again later."
                 ),
-
                 headers={
                     "Retry-After": str(retry_after)
                 }
-
             )
 
         attempts.append(now)
@@ -226,11 +189,9 @@ def check_rate_limit(
 # ==========================================
 
 def validate_email(email: str):
-
     email = email.strip().lower()
 
     if len(email) > 254:
-
         raise HTTPException(
             status_code=422,
             detail="Invalid email address"
@@ -244,7 +205,6 @@ def validate_email(email: str):
     )
 
     if not re.fullmatch(pattern, email):
-
         raise HTTPException(
             status_code=422,
             detail="Invalid email address"
@@ -258,7 +218,6 @@ def validate_email(email: str):
         or local_part.endswith(".")
         or ".." in local_part
     ):
-
         raise HTTPException(
             status_code=422,
             detail="Invalid email address"
@@ -272,7 +231,6 @@ def validate_email(email: str):
 # ==========================================
 
 def hash_password(password: str):
-
     return password_hasher.hash(password)
 
 
@@ -280,9 +238,7 @@ def verify_password(
     password: str,
     stored_hash: str
 ):
-
     try:
-
         return password_hasher.verify(
             stored_hash,
             password
@@ -293,7 +249,6 @@ def verify_password(
         VerificationError,
         InvalidHashError
     ):
-
         return False
 
 
@@ -302,7 +257,6 @@ def verify_password(
 # ==========================================
 
 class SignupInput(BaseModel):
-
     email: str = Field(
         min_length=5,
         max_length=254
@@ -315,7 +269,6 @@ class SignupInput(BaseModel):
 
 
 class LoginInput(BaseModel):
-
     email: str = Field(
         min_length=5,
         max_length=254
@@ -332,31 +285,21 @@ class LoginInput(BaseModel):
 # ==========================================
 
 def create_access_token(user_id: int):
-
     now = datetime.now(timezone.utc)
 
     payload = {
-
         "sub": str(user_id),
-
         "iat": now,
-
         "exp": now + timedelta(
             minutes=TOKEN_EXPIRE_MINUTES
         ),
-
         "type": "access"
-
     }
 
     return jwt.encode(
-
         payload,
-
         JWT_SECRET,
-
         algorithm=JWT_ALGORITHM
-
     )
 
 
@@ -365,42 +308,29 @@ def create_access_token(user_id: int):
 # ==========================================
 
 def decode_access_token(token: str):
-
     if not token or len(token) > 4096:
-
         raise jwt.InvalidTokenError(
             "Invalid token"
         )
 
     payload = jwt.decode(
-
         token,
-
         JWT_SECRET,
-
         algorithms=[JWT_ALGORITHM],
-
         options={
-
             "require": [
                 "sub",
                 "iat",
                 "exp",
                 "type"
             ],
-
             "verify_signature": True,
-
             "verify_exp": True,
-
             "verify_iat": True
-
         }
-
     )
 
     if payload["type"] != "access":
-
         raise jwt.InvalidTokenError(
             "Invalid token type"
         )
@@ -408,15 +338,16 @@ def decode_access_token(token: str):
     subject = payload["sub"]
 
     if not isinstance(subject, str):
-
         raise jwt.InvalidTokenError(
             "Invalid user ID"
         )
 
     user_id = int(subject)
 
-    if user_id <= 0 or user_id > 9223372036854775807:
-
+    if (
+        user_id <= 0
+        or user_id > 9223372036854775807
+    ):
         raise jwt.InvalidTokenError(
             "Invalid user ID"
         )
@@ -434,33 +365,25 @@ def signup(
     request: Request,
     response: Response
 ):
-
     response.headers["Cache-Control"] = "no-store"
 
     client_ip = get_client_ip(request)
 
     check_rate_limit(
-
         key=("signup", client_ip),
-
         max_attempts=SIGNUP_MAX_ATTEMPTS,
-
         window_seconds=SIGNUP_WINDOW_SECONDS
-
     )
 
     email = validate_email(data.email)
 
     try:
-
         password_hash = hash_password(
             data.password
         )
 
         with auth_database() as conn:
-
             cursor = conn.execute(
-
                 """
                 INSERT INTO users (
                     email,
@@ -468,42 +391,29 @@ def signup(
                 )
                 VALUES (?, ?)
                 """,
-
                 (
                     email,
                     password_hash
                 )
-
             )
 
             user_id = cursor.lastrowid
 
         return {
-
             "message": "User registered successfully",
-
             "user_id": user_id
-
         }
 
     except sqlite3.IntegrityError as exc:
-
         raise HTTPException(
-
             status_code=409,
-
             detail="Email already registered"
-
         ) from exc
 
     except sqlite3.Error as exc:
-
         raise HTTPException(
-
             status_code=500,
-
             detail="Unable to register user"
-
         ) from exc
 
 
@@ -517,29 +427,21 @@ def login(
     request: Request,
     response: Response
 ):
-
     response.headers["Cache-Control"] = "no-store"
 
     client_ip = get_client_ip(request)
 
     check_rate_limit(
-
         key=("login", client_ip),
-
         max_attempts=LOGIN_MAX_ATTEMPTS,
-
         window_seconds=LOGIN_WINDOW_SECONDS
-
     )
 
     email = validate_email(data.email)
 
     try:
-
         with auth_database() as conn:
-
             user = conn.execute(
-
                 """
                 SELECT
                     id,
@@ -549,87 +451,52 @@ def login(
                 FROM users
                 WHERE email = ?
                 """,
-
                 (email,)
-
             ).fetchone()
 
     except sqlite3.Error as exc:
-
         raise HTTPException(
-
             status_code=500,
-
             detail="Unable to login"
-
         ) from exc
 
-
     stored_hash = (
-
         user["password_hash"]
-
         if user is not None
-
         else DUMMY_PASSWORD_HASH
-
     )
-
 
     password_valid = verify_password(
-
         data.password,
-
         stored_hash
-
     )
 
-
     if user is None or not password_valid:
-
         raise HTTPException(
-
             status_code=401,
-
             detail="Invalid email or password",
-
             headers={
                 "WWW-Authenticate": "Bearer"
             }
-
         )
-
 
     if not user["is_active"]:
-
         raise HTTPException(
-
             status_code=403,
-
             detail="Account is disabled"
-
         )
-
 
     access_token = create_access_token(
         user["id"]
     )
 
-
     return {
-
         "message": "Login successful",
-
         "user_id": user["id"],
-
         "email": user["email"],
-
         "access_token": access_token,
-
         "token_type": "bearer",
-
         "expires_in": TOKEN_EXPIRE_MINUTES * 60
-
     }
 
 
@@ -638,29 +505,20 @@ def login(
 # ==========================================
 
 def get_current_user(
-
     credentials: HTTPAuthorizationCredentials = Depends(
         security
     )
-
 ):
-
     if credentials is None:
-
         raise HTTPException(
-
             status_code=401,
-
             detail="Authentication required",
-
             headers={
                 "WWW-Authenticate": "Bearer"
             }
-
         )
 
     try:
-
         user_id = decode_access_token(
             credentials.credentials
         )
@@ -671,25 +529,17 @@ def get_current_user(
         TypeError,
         OverflowError
     ):
-
         raise HTTPException(
-
             status_code=401,
-
             detail="Invalid or expired token",
-
             headers={
                 "WWW-Authenticate": "Bearer"
             }
-
         )
 
     try:
-
         with auth_database() as conn:
-
             user = conn.execute(
-
                 """
                 SELECT
                     id,
@@ -698,43 +548,27 @@ def get_current_user(
                 FROM users
                 WHERE id = ?
                 """,
-
                 (user_id,)
-
             ).fetchone()
 
     except sqlite3.Error as exc:
-
         raise HTTPException(
-
             status_code=500,
-
             detail="Unable to validate user"
-
         ) from exc
 
-
     if user is None or not user["is_active"]:
-
         raise HTTPException(
-
             status_code=401,
-
             detail="User not found or inactive",
-
             headers={
                 "WWW-Authenticate": "Bearer"
             }
-
         )
 
-
     return {
-
         "user_id": user["id"],
-
         "email": user["email"]
-
     }
 
 
@@ -744,13 +578,9 @@ def get_current_user(
 
 @router.get("/me")
 def get_my_profile(
-
     response: Response,
-
     current_user=Depends(get_current_user)
-
 ):
-
     response.headers["Cache-Control"] = "no-store"
 
     return current_user

@@ -1,7 +1,7 @@
 import sqlite3
+from config import DB_PATH
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent / "credisense.db"
 conn = sqlite3.connect(DB_PATH)
 
 conn.execute("""

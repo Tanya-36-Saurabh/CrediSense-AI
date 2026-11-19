@@ -1,4 +1,4 @@
-
+from config import DB_PATH
 import sqlite3
 from datetime import date
 from pathlib import Path
@@ -13,8 +13,6 @@ router = APIRouter(
     prefix="/api/bills",
     tags=["Bill Management"]
 )
-
-DB_PATH = Path(__file__).resolve().parent / "credisense.db"
 
 
 # Request Models

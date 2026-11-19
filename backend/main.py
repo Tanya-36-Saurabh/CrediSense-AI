@@ -22,11 +22,10 @@ from reward_engine import (
     recommend_card_v2,
     router as reward_router,
 )
+from config import DB_PATH
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "credisense.db"
 MAX_AMOUNT = 1_000_000_000_000
-
 app = FastAPI(title="CrediSense AI")
 app.include_router(auth_router)
 app.include_router(reward_router)
@@ -149,6 +148,36 @@ def health():
 @app.get("/dashboard", include_in_schema=False)
 def dashboard():
     return FileResponse(BASE_DIR / "dashboard.html", headers={"Cache-Control": "no-store"})
+
+@app.get("/manifest.json", include_in_schema=False)
+def pwa_manifest():
+    return FileResponse(
+        BASE_DIR / "manifest.json",
+        media_type="application/manifest+json"
+    )
+
+
+@app.get("/icon.svg", include_in_schema=False)
+def pwa_icon():
+    return FileResponse(
+        BASE_DIR / "icon.svg",
+        media_type="image/svg+xml"
+    )
+
+@app.get("/icon-192.png", include_in_schema=False)
+def pwa_icon_192():
+    return FileResponse(
+        BASE_DIR / "icon-192.png",
+        media_type="image/png"
+    )
+
+
+@app.get("/icon-512.png", include_in_schema=False)
+def pwa_icon_512():
+    return FileResponse(
+        BASE_DIR / "icon-512.png",
+        media_type="image/png"
+    )
 
 
 @app.get("/add-card", include_in_schema=False)

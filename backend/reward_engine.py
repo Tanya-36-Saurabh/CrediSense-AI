@@ -1,4 +1,4 @@
-
+from config import DB_PATH
 """CrediSense AI 2.0 - Reward recommendation engine."""
 
 import math
@@ -16,8 +16,6 @@ router = APIRouter(
     prefix="/api/v2",
     tags=["Rewards v2"]
 )
-
-DB_PATH = Path(__file__).resolve().parent / "credisense.db"
 
 
 class PurchaseRequestV2(BaseModel):
